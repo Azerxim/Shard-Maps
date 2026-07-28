@@ -53,7 +53,7 @@
       "hidden": 0
     },
     "retour": {
-      "href": "https://amethyst.spinelle.eu",
+      "href": "https://beta.tetrago.fr",
       "title": "Role Play",
       "icon": "fa-solid fa-home",
       "class": "",
@@ -61,7 +61,7 @@
       "hidden": 0
     },
     "livemap": {
-      "href": "https://map.mbu.spinelle.eu",
+      "href": "https://map.beta.tetrago.fr",
       "title": "Carte en temps réel",
       "icon": "fa-solid fa-map",
       "class": "",
