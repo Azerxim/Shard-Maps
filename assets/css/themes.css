@@ -3,8 +3,11 @@
   color-scheme: light;
   /* Palette inspirée du logo : ciel brumeux, continents verts, anneau doré */
   --color-base-0: oklch(100% 0 0);
+  --color-base-50: oklch(96% 0 240);
   --color-base-100: oklch(97% 0.008 240);
+  --color-base-150: oklch(95% 0.01 240);
   --color-base-200: oklch(93% 0.014 238);
+  --color-base-250: oklch(90% 0.018 238);
   --color-base-300: oklch(87% 0.022 238);
   --color-base-400: oklch(80% 0.028 238);
   --color-base-500: oklch(72% 0.034 238);
@@ -40,8 +43,11 @@
   color-scheme: dark;
   /* Palette inspirée du logo : profondeurs océaniques, continents lumineux, anneau doré */
   --color-base-0: oklch(0% 0 0);
+  --color-base-50: oklch(20% 0.03 244);
   --color-base-100: oklch(26% 0.045 244);
+  --color-base-150: oklch(24% 0.042 244);
   --color-base-200: oklch(22% 0.038 244);
+  --color-base-250: oklch(20% 0.034 244);
   --color-base-300: oklch(19% 0.032 244);
   --color-base-400: oklch(16% 0.026 244);
   --color-base-500: oklch(13% 0.018 244);
