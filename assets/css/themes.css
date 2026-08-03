@@ -1,30 +1,68 @@
-:root:has(input.theme-controller[value=light]:checked),[data-theme="light"] {
+:root:has(input.theme-controller[value="light"]:checked),
+[data-theme="light"] {
   color-scheme: light;
-  name: "light";
-  default: true;
-  prefersdark: false;
-  color-scheme: "light";
-  --color-base-100: oklch(96% 0.007 247.896);
-  --color-base-200: oklch(92% 0.013 255.508);
-  --color-base-300: oklch(86% 0.022 252.894);
-  --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(62% 0.214 259.815);
-  --color-primary-content: oklch(93% 0.034 272.788);
-  --color-secondary: oklch(65% 0.241 354.308);
-  --color-secondary-content: oklch(94% 0.028 342.258);
-  --color-accent: oklch(77% 0.152 181.912);
-  --color-accent-content: oklch(38% 0.063 188.416);
-  --color-neutral: oklch(14% 0.005 285.823);
-  --color-neutral-content: oklch(92% 0.004 286.32);
-  --color-info: oklch(74% 0.16 232.661);
-  --color-info-content: oklch(29% 0.066 243.157);
-  --color-success: oklch(76% 0.177 163.223);
-  --color-success-content: oklch(37% 0.077 168.94);
-  --color-warning: oklch(82% 0.189 84.429);
-  --color-warning-content: oklch(41% 0.112 45.904);
-  --color-error: oklch(71% 0.194 13.428);
-  --color-error-content: oklch(27% 0.105 12.094);
-  --radius-selector: 1rem;
+  /* Palette inspirée du logo : ciel brumeux, continents verts, anneau doré */
+  --color-base-0: oklch(100% 0 0);
+  --color-base-100: oklch(97% 0.008 240);
+  --color-base-200: oklch(93% 0.014 238);
+  --color-base-300: oklch(87% 0.022 238);
+  --color-base-400: oklch(80% 0.028 238);
+  --color-base-500: oklch(72% 0.034 238);
+  --color-base-content: oklch(18% 0.032 248);
+  --color-primary: oklch(70% 0.142 80); /* or ambré — anneau orbital */
+  --color-primary-content: oklch(14% 0.04 78);
+  --color-secondary: oklch(56% 0.152 148); /* vert forêt — continents */
+  --color-secondary-content: oklch(97% 0.018 148);
+  --color-accent: oklch(42% 0.068 238); /* bleu-ardoise — océans */
+  --color-accent-content: oklch(95% 0.014 240);
+  --color-neutral: oklch(22% 0.04 245);
+  --color-neutral-content: oklch(93% 0.008 240);
+  --color-info: oklch(58% 0.12 238);
+  --color-info-content: oklch(96% 0.014 238);
+  --color-success: oklch(60% 0.148 148);
+  --color-success-content: oklch(97% 0.018 148);
+  --color-warning: oklch(74% 0.148 80);
+  --color-warning-content: oklch(16% 0.04 78);
+  --color-error: oklch(62% 0.205 24);
+  --color-error-content: oklch(97% 0.018 24);
+  --radius-selector: 0.75rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+:root:has(input.theme-controller[value="dark"]:checked),
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* Palette inspirée du logo : profondeurs océaniques, continents lumineux, anneau doré */
+  --color-base-0: oklch(0% 0 0);
+  --color-base-100: oklch(26% 0.045 244);
+  --color-base-200: oklch(22% 0.038 244);
+  --color-base-300: oklch(19% 0.032 244);
+  --color-base-400: oklch(16% 0.026 244);
+  --color-base-500: oklch(13% 0.018 244);
+  --color-base-content: oklch(95% 0.014 244);
+  --color-primary: oklch(72% 0.148 80); /* or ambré — anneau orbital */
+  --color-primary-content: oklch(14% 0.04 78);
+  --color-secondary: oklch(62% 0.162 148); /* vert forêt vif — continents */
+  --color-secondary-content: oklch(97% 0.018 148);
+  --color-accent: oklch(64% 0.108 200); /* bleu-teal — reflets océan */
+  --color-accent-content: oklch(18% 0.038 200);
+  --color-neutral: oklch(14% 0.028 248);
+  --color-neutral-content: oklch(90% 0.01 240);
+  --color-info: oklch(62% 0.118 232);
+  --color-info-content: oklch(96% 0.014 232);
+  --color-success: oklch(62% 0.155 148);
+  --color-success-content: oklch(97% 0.018 148);
+  --color-warning: oklch(72% 0.148 80);
+  --color-warning-content: oklch(14% 0.04 78);
+  --color-error: oklch(64% 0.205 24);
+  --color-error-content: oklch(97% 0.018 24);
+  --radius-selector: 0.75rem;
   --radius-field: 0.5rem;
   --radius-box: 1rem;
   --size-selector: 0.25rem;
