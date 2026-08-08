@@ -22,7 +22,7 @@
       "title": "Civilisations",
       "icon": "fa-solid fa-city",
       "class": "",
-      "hidden": 1
+      "hidden": 0
     },
     "commerces": {
       "title": "Commerces",

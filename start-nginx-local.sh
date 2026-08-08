@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_PATH="$SCRIPT_DIR"
 NGINX_CONF="$SCRIPT_DIR/nginx.conf"
 NGINX_TEMP="/tmp/nginx-local"
+ENV_FILE="$SCRIPT_DIR/.env"
 
 echo "=========================================="
 echo "Démarrage local de nginx"
@@ -23,6 +24,26 @@ if [ ! -f "$NGINX_CONF" ]; then
     echo "❌ Erreur: Le fichier nginx.conf n'existe pas à $NGINX_CONF"
     exit 1
 fi
+
+# Charger les variables du fichier .env (voir .env.example) s'il existe
+if [ -f "$ENV_FILE" ]; then
+    echo "✓ Chargement de $ENV_FILE"
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+else
+    echo "⚠ Aucun fichier .env trouvé, valeurs par défaut utilisées (voir .env.example)"
+fi
+
+# Générer assets/scripts/env.js à partir des variables d'environnement, lu par
+# shard-api.js via window.SHARD_API_BASE_URL. Fichier généré, non versionné.
+echo "✓ Génération de assets/scripts/env.js..."
+cat > "$SCRIPT_DIR/assets/scripts/env.js" << EOF
+// Fichier généré automatiquement par start-nginx-local.sh à partir de .env.
+// Ne pas éditer à la main ni committer (voir .gitignore).
+window.SHARD_API_BASE_URL = "${SHARD_API_BASE_URL:-http://localhost:8000/api}";
+EOF
 
 # Créer un dossier temporaire pour les fichiers de nginx
 mkdir -p "$NGINX_TEMP"/{cache,pid,logs}

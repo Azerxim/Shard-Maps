@@ -427,17 +427,17 @@ window.createMap = function () {
     if (pathname.data != "endrya") {
       L.marker([-spawn.z, spawn.x], { icon: SpawnIcon })
         .addTo(map) // [-z, x]
-        .bindTooltip('<b class="ultradarkblue">Spawn</b>');
+        .bindTooltip('<b class="">Spawn</b>', { className: "bg-base-100" });
     } else {
       L.marker([0, 0], { icon: SpawnIcon })
         .addTo(map) // [-z, x]
-        .bindTooltip('<b class="ultradarkblue">Spawn</b>');
+        .bindTooltip('<b class="">Spawn</b>', { className: "bg-base-100" });
     }
 
     let json, subdata;
     switch (pathname.option) {
       case "civilisations":
-        // json = await MarkersCivilisations(pathname.data);
+        json = await MarkersCivilisations(pathname.data);
         break;
 
       case "commerces":
@@ -481,7 +481,7 @@ window.createMap = function () {
           case "Markers":
             L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
               .addTo(map) // [-z, x]
-              .bindTooltip("")
+              .bindTooltip("", { className: "bg-base-100" })
               .bindPopup(subdata.popup, { className: "customPopup" });
             break;
 
@@ -500,7 +500,7 @@ window.createMap = function () {
           case "Markers":
             L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
               .addTo(map) // [-z, x]
-              .bindTooltip(subdata.tooltip)
+              .bindTooltip(subdata.tooltip, { className: "bg-base-100" })
               .bindPopup(subdata.popup, { className: "customPopup" });
             break;
         }

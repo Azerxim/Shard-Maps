@@ -24,6 +24,9 @@ dist-ssr
 *.sw?
 .env
 
+# Généré au démarrage (start-nginx-local.sh) à partir de .env, voir .env.example
+assets/scripts/env.js
+
 # Data
 data/
 datas/

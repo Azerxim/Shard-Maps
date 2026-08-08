@@ -23,8 +23,8 @@ body::-webkit-scrollbar {
     color: #fff;
 }
 
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-    background: rgba(64, 64, 64, 0.5);
+.leaflet-popup-content-wrapper, .leaflet-popup-tip, .leaflet-popup-content-wrapper {
+    background: var(--color-base-100, rgba(64, 64, 64, 0.5));
 }
 
 .overzoomed {
