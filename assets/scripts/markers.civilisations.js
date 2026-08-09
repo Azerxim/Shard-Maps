@@ -12,21 +12,32 @@
 const UI_BASE_URL = window.UI_BASE_URL || "http://localhost";
 
 async function fetchCivilisationsPosts(world) {
-  const [civilisations, dimensions, currentUser] = await Promise.all([
-    shardApiGet("/civilisations/list?limit=1000"),
-    shardApiGet("/cartographie/dimensions/read?limit=1000"),
-    shardApiCurrentUser(),
-  ]);
+  const [civilisations, cartographies, dimensions, currentUser] =
+    await Promise.all([
+      shardApiGet("/civilisations/list?limit=1000"),
+      shardApiGet("/cartographie/list?limit=1000"),
+      shardApiGet("/cartographie/dimensions/read?limit=1000"),
+      shardApiCurrentUser(),
+    ]);
 
   const dimension = dimensions.find(
     (d) => (d.link || "").toLowerCase() === String(world).toLowerCase(),
   );
   const dimensionId = dimension ? dimension.id : null;
 
-  // console.log({ civilisations: civilisations, dimensions: dimensions, currentUser: currentUser, dimension: dimension });
+  console.log({
+    civilisations: civilisations,
+    cartographies: cartographies,
+    dimensions: dimensions,
+    currentUser: currentUser,
+    dimension: dimension,
+  });
 
   const posts = {
     civilisations: civilisations.filter((civ) => civ.civilisation.is_public),
+    cartographies: cartographies.filter(
+      (carto) => carto.dimension_id === dimensionId,
+    ),
     dimension: dimension,
   };
 
@@ -38,11 +49,15 @@ async function MarkersCivilisations(world) {
   let polygons = [];
   let markers = [];
   let popup, tooltip, icon;
-  console.log({ world: world, datas: datas });
+  // console.log({ world: world, datas: datas });
 
   for (const one in datas.civilisations) {
     let data = datas.civilisations[one];
     let civilisation = data.civilisation;
+    let civ_carto = datas.cartographies.filter(
+      (carto) =>
+        carto.type_id === civilisation.id && carto.type === "civilisation",
+    );
     let villes = data.villes;
     // Polygons
     popup = `<a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-primary btn-sm" style="">${civilisation.title}</a>`;
@@ -50,6 +65,33 @@ async function MarkersCivilisations(world) {
     icon = "udbIcon";
 
     // Polygon data
+    civ_carto.forEach((polygon) => {
+      popup = `
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-row gap-2">
+              <span>Ville:</span>
+              <span>${polygon.title}</span>
+            </div>
+            <div class="flex flex-row gap-2">
+              <span>Description:</span>
+              <span>${polygon.description}</span>
+            </div>
+            <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
+          </div>`;
+      tooltip = ``;
+      polygons.push({
+        type: polygon.shape_type,
+        dbid: polygon.id,
+        option: "civ",
+        // authorisation: data.authorisation,
+        coords: polygon.coordinates,
+        color: polygon.color,
+        text: polygon.text,
+        icon: icon,
+        popup: popup,
+        tooltip: tooltip,
+      });
+    });
 
     // Villes
     for (let ville in villes) {
@@ -73,6 +115,7 @@ async function MarkersCivilisations(world) {
       } else {
         icon = CityIcon;
       }
+
       // Marker Ville
       markers.push({
         type: "Markers",
@@ -83,6 +126,39 @@ async function MarkersCivilisations(world) {
         icon: icon,
         popup: popup,
         tooltip: tooltip,
+      });
+
+      // Polygons Ville
+      let ville_carto = datas.cartographies.filter(
+        (carto) => carto.type_id === subdata.id && carto.type === "ville",
+      );
+      ville_carto.forEach((polygon) => {
+        popup = `
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-row gap-2">
+              <span>Ville:</span>
+              <span>${polygon.title}</span>
+            </div>
+            <div class="flex flex-row gap-2">
+              <span>Description:</span>
+              <span>${polygon.description}</span>
+            </div>
+            <a href="${UI_BASE_URL}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+            <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
+          </div>`;
+        tooltip = ``;
+        polygons.push({
+          type: polygon.shape_type,
+          dbid: polygon.id,
+          option: "civ",
+          // authorisation: data.authorisation,
+          coords: polygon.coordinates,
+          color: polygon.color,
+          text: polygon.text,
+          icon: icon,
+          popup: popup,
+          tooltip: tooltip,
+        });
       });
     }
   }

@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+env.js
 
 # Généré au démarrage (start-nginx-local.sh) à partir de .env, voir .env.example
 assets/scripts/env.js
