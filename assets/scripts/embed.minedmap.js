@@ -438,7 +438,7 @@ window.createMap = function () {
     let json, subdata;
     switch (pathname.option) {
       case "civilisations":
-        // json = await MarkersCivilisations(pathname.data);
+        json = await MarkersCivilisations(pathname.data);
         break;
 
       case "commerces":
@@ -454,7 +454,9 @@ window.createMap = function () {
         break;
     }
 
-    highlightLayerControl();
+    // console.log('json:', json);
+
+    // highlightLayerControl();
 
     if (json) {
       for (let one in json.polygons) {

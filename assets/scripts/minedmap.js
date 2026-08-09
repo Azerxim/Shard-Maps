@@ -453,7 +453,7 @@ window.createMap = function () {
         break;
     }
 
-    console.log('json:', json);
+    // console.log('json:', json);
 
     highlightLayerControl();
 

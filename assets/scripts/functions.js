@@ -9,7 +9,7 @@ const parsePathName = function () {
       let key;
       switch (part) {
         case "embed":
-        case "embedplus":
+        case "embedfull":
         case "editor":
           key = "file";
           break;
