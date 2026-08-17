@@ -1,6 +1,6 @@
 {
   "name": "shardui-2-maps",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "description": "NPM scripts for ShardUI-2-Maps",
   "scripts": {

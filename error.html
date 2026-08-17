@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html data-theme="light">
   <head>
     <meta charset="utf-8" />
@@ -9,7 +9,10 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Erreur - ShardUI 2 Maps</title>
-    <link rel="shortcut icon" href="//beta.tetrago.fr/images/logo/tetrago_black_contour.png" />
+    <link
+      rel="shortcut icon"
+      href="/assets/images/logo/tetrago_black_contour.png"
+    />
 
     <!-- Tailwind CSS & DaisyUI -->
     <link
@@ -23,30 +26,47 @@
       rel="stylesheet"
       type="text/css"
     />
-    <link href="assets/css/themes.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/themes.css" rel="stylesheet" type="text/css" />
 
     <!-- Fontawesome Icons -->
-    <link rel="stylesheet" href="assets/fontawesome/css/all.css" />
-    <script defer src="assets/fontawesome/js/all.js"></script>
+    <link rel="stylesheet" href="/assets/fontawesome/css/all.css" />
+    <script defer src="/assets/fontawesome/js/all.js"></script>
   </head>
   <body class="">
     <!-- Navbar -->
-    <div class="navbar bg-base-200 shadow-lg sticky top-0 z-50">
-      <div class="flex-1">
+    <div
+      class="navbar fixed flex flex-row justify-between items-center gap-2 px-2 py-3 z-999 top-3 left-3 right-3 w-auto rounded-3xl bg-base-200 shadow-lg"
+    >
+      <div class="navbar-start">
         <a href="/" class="btn btn-ghost normal-case text-xl">
           <i class="fas fa-map mr-2"></i>ShardUI 2 Maps
         </a>
       </div>
-      <div class="flex-none gap-2">
+      <div class="navbar-end">
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="btn btn-sm btn-ghost">
             <i class="fa-solid fa-palette mr-2"></i>Thème
           </div>
-          <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1">
-            <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('light')"><span>Clair</span><i class="fas fa-sun ml-2"></i></a></li>
+          <ul
+            tabindex="-1"
+            class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mt-6 shadow-xl flex-col gap-1"
+          >
+            <li>
+              <a
+                class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+                onclick="setTheme('light')"
+                ><span>Clair</span><i class="fas fa-sun ml-2"></i
+              ></a>
+            </li>
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('winter')"><span>Winter</span><i class="fa-solid fa-snowflake ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('lemonade')"><span>Lemonade</span><i class="fa-solid fa-lemon ml-2"></i></a></li> -->
-            <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dark')"><span>Sombre</span><i class="fas fa-moon ml-2"></i></a></li>
+            <li>
+              <a
+                class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+                onclick="setTheme('dark')"
+                ><span>Sombre</span><i class="fas fa-moon ml-2"></i
+              ></a>
+            </li>
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('night')"><span>Night</span><i class="fa-solid fa-star ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dim')"><span>Dim</span><i class="fa-solid fa-eye-slash ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('synthwave')"><span>Synthwave</span><i class="fa-solid fa-music ml-2"></i></a></li> -->
@@ -60,37 +80,71 @@
       </div>
     </div>
 
-	<div class="flex flex-col items-center justify-center gap-20" style="width: 100%; margin: 20px;">
-		<div class="flex flex-row flex-wrap items-center gap-5">
-			<i class="fa-solid fa-triangle-exclamation fa-beat fa-2xl"></i>
-			<h1 class="is-size-1">Erreur</h1>
-		</div>
-		<img src="https://dl.topazdev.fr/stock/draws/undraw/undraw_alert_re_j2op.svg" alt="404 Not Found"/>
-		<h3 class="is-size-4">Page inaccessible</h3>
-	</div>
+    <div
+      class="flex flex-col items-center justify-center gap-20"
+      style="width: 100%; padding: 100px 20px 50px 20px;"
+    >
+      <div class="flex flex-row flex-wrap items-center gap-5">
+        <i class="fa-solid fa-triangle-exclamation fa-beat fa-2xl"></i>
+        <h1 class="text-2xl"><b>Erreur</b></h1>
+      </div>
+      <img
+        src="https://dl.topazdev.fr/stock/draws/undraw/undraw_alert_re_j2op.svg"
+        alt="404 Not Found"
+      />
+      <h3 class="text-lg">Page inaccessible</h3>
+    </div>
 
     <!-- Footer -->
     <footer
-      class="footer footer-center bg-base-300 text-base-content p-4 mt-12"
+      class="footer footer-horizontal bg-base-200 text-base-content items-center p-4 m-3 w-auto rounded-3xl"
     >
-      <aside>
-        <p>
-          <strong>ShardUI 2 Maps</strong> - Plateforme de cartographie pour
-          Minecraft
-          <br />
-          <small>© <span id="currentYear"></span> - Tous droits réservés</small>
-        </p>
+      <aside class="grid-flow-col items-center">
+        <img
+          src="https://beta.tetrago.fr/images/logo/galaxie.png"
+          alt="logo"
+          width="24"
+          height="24"
+        />
+        <span class="flex items-center gap-1.5">
+          <span class="hidden md:flex">Spinelle Galaxie</span>
+          <i class="fas fa-copyright text-md"></i>
+          <span id="currentYear"></span>
+          <span class="hidden sm:flex">|</span>
+          <span class="hidden sm:flex">Tout droits réservés</span>
+        </span>
       </aside>
+      <nav class="grid-flow-col gap-4 justify-self-end items-center">
+        <p class="text-sm text-gray-400"><i>ShardUI 2 Maps</i></p>
+        <a
+          href="https://discord.gg/nUFwE9S"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="tooltip tooltip-left"
+          data-tip="Rejoindre le Discord"
+        >
+          <i class="fa-brands fa-discord text-xl"></i>
+        </a>
+        <a
+          href="https://github.com/Azerxim/ShardUI-2-Maps"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="tooltip tooltip-left"
+          data-tip="Voir le code source sur GitHub"
+        >
+          <i class="fa-brands fa-github text-xl"></i>
+        </a>
+      </nav>
     </footer>
 
     <script>
-		// Year update
-		document.addEventListener("DOMContentLoaded", function () {
-			const yearSpan = document.getElementById("currentYear");
-			if (yearSpan) {
-				yearSpan.textContent = new Date().getFullYear();
-			}
-		});
+      // Year update
+      document.addEventListener("DOMContentLoaded", function () {
+        const yearSpan = document.getElementById("currentYear");
+        if (yearSpan) {
+          yearSpan.textContent = new Date().getFullYear();
+        }
+      });
 
       // Theme management
       function setTheme(theme) {
@@ -106,7 +160,7 @@
         } else {
           // Use system preference
           const prefersDark = window.matchMedia(
-            "(prefers-color-scheme: dark)"
+            "(prefers-color-scheme: dark)",
           ).matches;
           setTheme(prefersDark ? "dark" : "light");
         }

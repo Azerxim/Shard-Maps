@@ -43,6 +43,7 @@ cat > "$SCRIPT_DIR/assets/scripts/env.js" << EOF
 // Fichier généré automatiquement par start-nginx-local.sh à partir de .env.
 // Ne pas éditer à la main ni committer (voir .gitignore).
 window.SHARD_API_BASE_URL = "${SHARD_API_BASE_URL:-http://localhost:8000/api}";
+window.UI_BASE_URL = "${UI_BASE_URL:-http://localhost:5173}";
 EOF
 
 # Créer un dossier temporaire pour les fichiers de nginx

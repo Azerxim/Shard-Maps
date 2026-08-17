@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html data-theme="light">
   <head>
     <meta charset="utf-8" />
@@ -9,7 +9,10 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>À propos - ShardUI 2 Maps</title>
-    <link rel="shortcut icon" href="//beta.tetrago.fr/images/logo/tetrago_black_contour.png" />
+    <link
+      rel="shortcut icon"
+      href="/assets/images/logo/tetrago_black_contour.png"
+    />
 
     <!-- Tailwind CSS & DaisyUI -->
     <link
@@ -23,11 +26,11 @@
       rel="stylesheet"
       type="text/css"
     />
-    <link href="assets/css/themes.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/themes.css" rel="stylesheet" type="text/css" />
 
     <!-- Fontawesome Icons -->
-    <link rel="stylesheet" href="assets/fontawesome/css/all.css" />
-    <script defer src="assets/fontawesome/js/all.js"></script>
+    <link rel="stylesheet" href="/assets/fontawesome/css/all.css" />
+    <script defer src="/assets/fontawesome/js/all.js"></script>
 
     <style>
       .hero-gradient {
@@ -49,22 +52,37 @@
   </head>
   <body class="">
     <!-- Navbar -->
-    <div class="navbar bg-base-200 shadow-lg sticky top-0 z-50">
-      <div class="flex-1">
+    <div class="navbar fixed flex flex-row justify-between items-center gap-2 px-2 py-3 z-999 top-3 left-3 right-3 w-auto rounded-3xl bg-base-200 shadow-lg">
+      <div class="navbar-start">
         <a href="/" class="btn btn-ghost normal-case text-xl">
           <i class="fas fa-map mr-2"></i>ShardUI 2 Maps
         </a>
       </div>
-      <div class="flex-none gap-2">
+      <div class="navbar-end">
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="btn btn-sm btn-ghost">
             <i class="fa-solid fa-palette mr-2"></i>Thème
           </div>
-          <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mt-6 shadow-xl flex-col gap-1">
-            <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('light')"><span>Clair</span><i class="fas fa-sun ml-2"></i></a></li>
+          <ul
+            tabindex="-1"
+            class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mt-6 shadow-xl flex-col gap-1"
+          >
+            <li>
+              <a
+                class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+                onclick="setTheme('light')"
+                ><span>Clair</span><i class="fas fa-sun ml-2"></i
+              ></a>
+            </li>
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('winter')"><span>Winter</span><i class="fa-solid fa-snowflake ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('lemonade')"><span>Lemonade</span><i class="fa-solid fa-lemon ml-2"></i></a></li> -->
-            <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dark')"><span>Sombre</span><i class="fas fa-moon ml-2"></i></a></li>
+            <li>
+              <a
+                class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+                onclick="setTheme('dark')"
+                ><span>Sombre</span><i class="fas fa-moon ml-2"></i
+              ></a>
+            </li>
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('night')"><span>Night</span><i class="fa-solid fa-star ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dim')"><span>Dim</span><i class="fa-solid fa-eye-slash ml-2"></i></a></li> -->
             <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('synthwave')"><span>Synthwave</span><i class="fa-solid fa-music ml-2"></i></a></li> -->
@@ -86,8 +104,10 @@
             <i class="fa-solid fa-circle-info mr-3"></i>À propos
           </h1>
           <p class="text-xl opacity-90 mb-8">
-            Découvrez ShardUI 2 Maps, votre plateforme de cartographie
-            interactive pour vos serveurs Minecraft.
+            Découvrez ShardUI 2 Maps, la plateforme de cartographie
+            interactive développée pour le serveur Minecraft
+            <strong>Tetrago RP</strong>, propulsée par
+            <strong>Shard API</strong>.
           </p>
         </div>
       </div>
@@ -105,8 +125,8 @@
             </div>
             <h2 class="card-title">Cartographie Interactive</h2>
             <p>
-              Explorez vos serveurs Minecraft avec des cartes interactives haute
-              résolution et détaillées.
+              Explorez le monde du serveur Tetrago RP avec des cartes
+              interactives haute résolution et détaillées.
             </p>
           </div>
         </div>
@@ -119,8 +139,8 @@
             </div>
             <h2 class="card-title">Marqueurs et POIs</h2>
             <p>
-              Marquez les civilisations, commerces, alliances et religions sur
-              vos cartes personnalisées.
+              Marquez les civilisations, commerces, alliances et religions du
+              roleplay Tetrago sur des cartes personnalisées.
             </p>
           </div>
         </div>
@@ -194,14 +214,17 @@
               Maps ?
             </h2>
             <p class="mb-4">
-              ShardUI 2 Maps est une plateforme de cartographie dédiée aux
-              serveurs Minecraft. Elle permet aux administrateurs et joueurs de
-              visualiser leurs mondes de manière interactive et intuitive.
+              ShardUI 2 Maps est la plateforme de cartographie officielle du
+              serveur Minecraft <strong>Tetrago RP</strong>. Elle permet aux
+              administrateurs et aux joueurs de visualiser le monde du
+              serveur de manière interactive et intuitive.
             </p>
             <p>
-              Basée sur les technologies web modernes (Leaflet, Tailwind CSS,
-              DaisyUI), elle offre une expérience utilisateur fluide et
-              responsive sur tous les appareils.
+              Les données affichées (civilisations, marqueurs, territoires...)
+              sont fournies en temps réel par <strong>Shard API</strong>,
+              notre backend maison, et le tout est mis en forme avec des
+              technologies web modernes (Leaflet, Tailwind CSS, DaisyUI) pour
+              une expérience fluide et responsive sur tous les appareils.
             </p>
           </div>
         </div>
@@ -213,6 +236,10 @@
               <i class="fas fa-code mr-2"></i>Technologies Utilisées
             </h2>
             <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="badge badge-neutral">Shard API</span>
+                <span class="text-sm">Backend &amp; données du serveur</span>
+              </div>
               <div class="flex items-center gap-2">
                 <span class="badge badge-primary">Leaflet</span>
                 <span class="text-sm">Cartographie interactive</span>
@@ -230,6 +257,57 @@
                 <span class="text-sm">Icônes</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tetrago RP & Shard API Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <!-- Tetrago RP -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+              <i class="fas fa-server mr-2"></i>Le serveur Tetrago RP
+            </h2>
+            <p class="mb-4">
+              Tetrago RP est un serveur Minecraft communautaire axé sur le
+              roleplay : civilisations, alliances, commerces et religions y
+              cohabitent au fil des aventures des joueurs.
+            </p>
+            <p>
+              ShardUI 2 Maps donne vie à cet univers en cartographiant en
+              direct les territoires et les points d'intérêt du serveur.
+            </p>
+            <div class="card-actions justify-start mt-2">
+              <a
+                href="https://beta.tetrago.fr"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-sm btn-outline"
+              >
+                <i class="fas fa-globe mr-2"></i>Visiter Tetrago
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shard API -->
+        <div class="card bg-base-200 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+              <i class="fas fa-network-wired mr-2"></i>Propulsé par Shard API
+            </h2>
+            <p class="mb-4">
+              Shard API est l'API maison, construite avec FastAPI et
+              SQLModel, qui alimente l'ensemble de l'écosystème Shard :
+              authentification, gestion des données et synchronisation avec
+              le serveur Tetrago RP.
+            </p>
+            <p>
+              C'est elle qui fournit à ShardUI 2 Maps les données à jour des
+              marqueurs, civilisations et territoires affichés sur les
+              cartes.
+            </p>
           </div>
         </div>
       </div>
@@ -291,7 +369,7 @@
       </div>
 
       <!-- Support Section -->
-      <div
+      <!-- <div
         class="card bg-gradient-to-r from-primary to-secondary text-primary-content shadow-xl"
       >
         <div class="card-body">
@@ -299,8 +377,9 @@
             <i class="fas fa-question-circle mr-2"></i>Besoin d'Aide ?
           </h2>
           <p class="mb-4">
-            Des questions sur ShardUI 2 Maps ? Consultez la documentation ou
-            contactez notre équipe de support.
+            Des questions sur ShardUI 2 Maps, sur Shard API ou sur le serveur
+            Tetrago RP ? Rejoignez notre communauté sur Discord ou contactez
+            notre équipe de support.
           </p>
           <div class="card-actions justify-end">
             <a href="/" class="btn btn-neutral">
@@ -308,31 +387,59 @@
             </a>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Footer -->
     <footer
-      class="footer footer-center bg-base-300 text-base-content p-4 mt-12"
+      class="footer footer-horizontal bg-base-200 text-base-content items-center p-4 m-3 w-auto rounded-3xl"
     >
-      <aside>
-        <p>
-          <strong>ShardUI 2 Maps</strong> - Plateforme de cartographie pour
-          Minecraft
-          <br />
-          <small>© <span id="currentYear"></span> - Tous droits réservés</small>
-        </p>
+      <aside class="grid-flow-col items-center">
+        <img
+          src="/assets/images/logo/galaxie.png"
+          alt="logo"
+          width="24"
+          height="24"
+        />
+        <span class="flex items-center gap-1.5">
+          <span class="hidden md:flex">Spinelle Galaxie</span>
+          <i class="fas fa-copyright text-md"></i>
+          <span id="currentYear"></span>
+          <span class="hidden sm:flex">|</span>
+          <span class="hidden sm:flex">Tout droits réservés</span>
+        </span>
       </aside>
+      <nav class="grid-flow-col gap-4 justify-self-end items-center">
+        <p class="text-sm text-gray-400"><i>ShardUI 2 Maps</i></p>
+        <a
+          href="https://discord.gg/nUFwE9S"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="tooltip tooltip-left"
+          data-tip="Rejoindre le Discord"
+        >
+          <i class="fa-brands fa-discord text-xl"></i>
+        </a>
+        <a
+          href="https://github.com/Azerxim/ShardUI-2-Maps"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="tooltip tooltip-left"
+          data-tip="Voir le code source sur GitHub"
+        >
+          <i class="fa-brands fa-github text-xl"></i>
+        </a>
+      </nav>
     </footer>
 
     <script>
-		// Year update
-		document.addEventListener("DOMContentLoaded", function () {
-			const yearSpan = document.getElementById("currentYear");
-			if (yearSpan) {
-				yearSpan.textContent = new Date().getFullYear();
-			}
-		});
+      // Year update
+      document.addEventListener("DOMContentLoaded", function () {
+        const yearSpan = document.getElementById("currentYear");
+        if (yearSpan) {
+          yearSpan.textContent = new Date().getFullYear();
+        }
+      });
 
       // Theme management
       function setTheme(theme) {
@@ -348,7 +455,7 @@
         } else {
           // Use system preference
           const prefersDark = window.matchMedia(
-            "(prefers-color-scheme: dark)"
+            "(prefers-color-scheme: dark)",
           ).matches;
           setTheme(prefersDark ? "dark" : "light");
         }
