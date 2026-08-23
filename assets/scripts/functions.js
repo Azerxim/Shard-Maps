@@ -10,6 +10,7 @@ const parsePathName = function () {
       switch (part) {
         case "embed":
         case "embedfull":
+        case "locate":
         case "editor":
           key = "file";
           break;

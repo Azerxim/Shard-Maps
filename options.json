@@ -12,11 +12,17 @@
       "class": "",
       "hidden": 1
     },
+    "locate": {
+      "title": "Locate",
+      "icon": "fa-solid fa-location-dot",
+      "class": "",
+      "hidden": 1
+    },
     "editor": {
       "title": "Editeur",
       "icon": "fa-solid fa-pen-to-square",
       "class": "",
-      "hidden": 0
+      "hidden": 1
     },
     "civilisations": {
       "title": "Civilisations",

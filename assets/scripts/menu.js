@@ -82,7 +82,7 @@ async function BuildOptions() {
 
       // <a> href
       a.href = pathname.data;
-      if (key == "embed" || key == "embedplus" || key == "editor") {
+      if (key == "embed" || key == "embedfull" || key == "locate" || key == "editor") {
         if (pathname.file != key) {
           a.href += "-" + key;
         }
@@ -90,7 +90,7 @@ async function BuildOptions() {
           a.href += "-" + pathname.option;
         }
       }
-      if (key != "embed" && key != "embedplus" && key != "editor") {
+      if (key != "embed" && key != "embedfull" && key != "locate" && key != "editor") {
         if (pathname.file != "") {
           a.href += "-" + pathname.file;
         }
@@ -131,7 +131,7 @@ async function updateOptions() {
       a = document.getElementById("Option_" + key);
       // <a> href
       a.href = pathname.data;
-      if (key == "embed" || key == "embedplus" || key == "editor") {
+      if (key == "embed" || key == "embedfull" || key == "locate" || key == "editor") {
         if (pathname.file != key) {
           a.href += "-" + key;
         }
@@ -139,7 +139,7 @@ async function updateOptions() {
           a.href += "-" + pathname.option;
         }
       }
-      if (key != "embed" && key != "embedplus" && key != "editor") {
+      if (key != "embed" && key != "embedfull" && key != "locate" && key != "editor") {
         if (pathname.file != "") {
           a.href += "-" + pathname.file;
         }

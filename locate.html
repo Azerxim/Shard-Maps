@@ -1,0 +1,124 @@
+<!doctype html>
+<html data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<meta name="robots" content="noindex, nofollow">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Embed Full - ShardUI 2 Maps</title>
+		<link rel="shortcut icon" href="//beta.tetrago.fr/images/logo/tetrago_black_contour.png"/>
+    <!-- MinedMap -->
+    <link rel="stylesheet" href="/assets/css/minedmap.css" />
+
+    <!-- Tailwind CSS & DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/themes.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Fontawesome & Material Icons -->
+    <link rel="stylesheet" href="/assets/fontawesome/css/all.css">
+    <script defer src="/assets/fontawesome/js/all.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="/assets/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet-geoman.css" />
+    <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet.awesome-markers.css">
+    <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet.icon-material.css">
+    <script src="/assets/leaflet/leaflet.js"></script>
+    <script src="/assets/leaflet/plugins/leaflet-geoman.min.js"></script>
+    <script src="/assets/leaflet/plugins/leaflet.awesome-markers.js"></script>
+    <script src="/assets/leaflet/plugins/leaflet.icon-material.js"></script>
+    
+    <!-- Alertbox -->
+    <script src="https://common.olemiss.edu/_js/sweet-alert/sweet-alert.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://common.olemiss.edu/_js/sweet-alert/sweet-alert.css">
+
+    <!-- JS -->
+    <script src="/assets/scripts/functions.js"></script>
+    <script src="/assets/scripts/markers.js"></script>
+    <script src="/assets/scripts/env.js"></script>
+    <script src="/assets/scripts/shard-api.js"></script>
+    <script src="/assets/scripts/markers.civilisations.js"></script>
+    <!-- <script src="/assets/scripts/markers.commerces.js"></script> -->
+    <!-- <script src="/assets/scripts/markers.alliances.js"></script> -->
+    <!-- <script src="/assets/scripts/markers.religions.js"></script> -->
+    <script src="/assets/scripts/locate.minedmap.js"></script>
+    <script src="/assets/scripts/menu.js"></script>
+    <style>
+      .leaflet-control-layers {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="">
+    <!-- Menu Date -->
+    <div class="menu-date flex flex-row-reverse justify-end bg-base-200" style="display:none;">
+      <span class="menu-date" id="maps_date"></span>
+    </div>
+
+    <!-- Menu Options -->
+    <div class="flex flex-row-reverse items-center flex-wrap-reverse gap-2 menu-option" id="Options">
+      <!-- Selecteur de Maps -->
+      <div class="dropdown dropdown-top dropdown-end" style="display:none;">
+        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-map"></i></div>
+        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1" id="Menu">
+        </ul>
+      </div>
+      <!-- Options Menu -->
+      <div class="dropdown dropdown-top dropdown-end" style="display:none;">
+        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-bars-staggered"></i></div>
+        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col-reverse gap-1" id="OptionsMenu">
+        </ul>
+      </div>
+      <!-- Theme Selector -->
+      <div class="dropdown dropdown-top dropdown-end" style="display:none;">
+        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-palette"></i></div>
+        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1">
+          <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('light')"><span>Clair</span><i class="fas fa-sun ml-2"></i></a></li>
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('winter')"><span>Winter</span><i class="fa-solid fa-snowflake ml-2"></i></a></li> -->
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('lemonade')"><span>Lemonade</span><i class="fa-solid fa-lemon ml-2"></i></a></li> -->
+          <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dark')"><span>Sombre</span><i class="fas fa-moon ml-2"></i></a></li>
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('night')"><span>Night</span><i class="fa-solid fa-star ml-2"></i></a></li> -->
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dim')"><span>Dim</span><i class="fa-solid fa-eye-slash ml-2"></i></a></li> -->
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('synthwave')"><span>Synthwave</span><i class="fa-solid fa-music ml-2"></i></a></li> -->
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('aqua')"><span>Aqua</span><i class="fa-solid fa-water ml-2"></i></a></li> -->
+          <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('coffee')"><span>Coffee</span><i class="fa-solid fa-mug-hot ml-2"></i></a></li> -->
+        </ul>
+      </div>
+      <!-- Options Buttons -->
+      <div class="flex flex-row-reverse flex-wrap-reverse gap-2" id="OptionsButtons" style="display:none;"></div>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- JS -->
+    <script type="text/javascript">
+      createMap();
+    </script>
+    
+    <script>
+      // Theme management
+      function setTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      }
+
+      // Load theme from localStorage or system preference
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+          setTheme(savedTheme);
+        } else {
+          // Use system preference
+          const prefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)"
+          ).matches;
+          setTheme(prefersDark ? "dark" : "light");
+        }
+      });
+    </script>
+  </body>
+</html>

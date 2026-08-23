@@ -36,9 +36,16 @@ fi
 mkdir -p /etc/nginx/sites-available
 mkdir -p /etc/nginx/sites-enabled
 
-# Copier la configuration
+# Racine du site et port d'écoute (surchargeables via variables d'environnement)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_PATH="${ROOT_PATH:-$SCRIPT_DIR}"
+PORT="${PORT:-80}"
+
+# Générer la configuration à partir du template en remplaçant {{PORT}} et {{ROOT_PATH}}
 echo "Configuration de nginx..."
-cp /home/azerxim/Documents/Shard-2/ShardUI-2-Maps/nginx.conf /etc/nginx/sites-available/shardui-maps
+sed -e "s|{{PORT}}|$PORT|g" \
+    -e "s|{{ROOT_PATH}}|$ROOT_PATH|g" \
+    "$SCRIPT_DIR/nginx.conf" > /etc/nginx/sites-available/shardui-maps
 
 # Activer la configuration
 if [ ! -L /etc/nginx/sites-enabled/shardui-maps ]; then
