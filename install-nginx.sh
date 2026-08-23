@@ -38,7 +38,7 @@ mkdir -p /etc/nginx/sites-enabled
 
 # Copier la configuration
 echo "Configuration de nginx..."
-cp /home/azerxim/Documents/ShardUI-2-Maps/nginx.conf /etc/nginx/sites-available/shardui-maps
+cp /home/azerxim/Documents/Shard-2/ShardUI-2-Maps/nginx.conf /etc/nginx/sites-available/shardui-maps
 
 # Activer la configuration
 if [ ! -L /etc/nginx/sites-enabled/shardui-maps ]; then
