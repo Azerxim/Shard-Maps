@@ -10,12 +10,17 @@
  */
 
 async function fetchCivilisationsPosts(world) {
-  const [civilisations, cartographies, dimensions, currentUser] =
+  const [civilisations, cartographies, dimensions, currentUser, quartiers] =
     await Promise.all([
       shardApiGet("/civilisations/list?limit=1000"),
       shardApiGet("/cartographie/list?limit=1000"),
       shardApiGet("/cartographie/dimensions/read?limit=1000"),
       shardApiCurrentUser(),
+      // Les quartiers ne doivent pas empêcher l'affichage des civilisations
+      shardApiGet("/civilisations/quartiers/list?limit=1000").catch((error) => {
+        console.error(error);
+        return [];
+      }),
     ]);
 
   const dimension = dimensions.find(
@@ -37,6 +42,7 @@ async function fetchCivilisationsPosts(world) {
       (carto) => carto.dimension_id === dimensionId,
     ),
     dimension: dimension,
+    quartiers: quartiers.filter((quartier) => quartier.is_public !== false),
   };
 
   return posts;
@@ -162,6 +168,50 @@ async function MarkersCivilisations(world) {
           tooltip: tooltip,
         });
       });
+
+      // Quartiers de la ville : marqueur au centre et frontières
+      const quartiers = datas.quartiers.filter((quartier) => quartier.ville_id === subdata.id);
+      for (const quartier of quartiers) {
+        const quartierPopup = `
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-row gap-2">
+              <span>Ville:</span>
+              <span>${escapeHtml(subdata.title)}</span>
+            </div>
+            <div class="flex flex-row gap-2">
+              <span>Quartier:</span>
+              <b>${escapeHtml(quartier.title)}</b>
+            </div>
+            <a href="${UI_BASE_URL}/quartier/${quartier.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir le quartier</a>
+            <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+          </div>`;
+
+        if (quartier.x != null && quartier.z != null) {
+          markers.push({
+            type: "Markers",
+            option: "quartier",
+            coords: JSON.stringify([-quartier.z, quartier.x]), // [-z, x]
+            icon: QuartierIcon,
+            popup: quartierPopup,
+            tooltip: `<b class="">${escapeHtml(subdata.title)} - ${escapeHtml(quartier.title)}</b>`,
+          });
+        }
+
+        datas.cartographies
+          .filter((carto) => carto.type === "quartier" && carto.type_id === quartier.id)
+          .forEach((polygon) => {
+            polygons.push({
+              type: polygon.shape_type,
+              dbid: polygon.id,
+              option: "quartier",
+              coords: polygon.coordinates,
+              color: polygon.color,
+              text: polygon.text,
+              popup: quartierPopup,
+              tooltip: ``,
+            });
+          });
+      }
     }
   }
 

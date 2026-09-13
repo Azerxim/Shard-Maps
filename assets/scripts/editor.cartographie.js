@@ -4,6 +4,7 @@
  * L'entité éditée est passée dans la query string :
  *  - {dimension}-editor-civilisations?civilisation=ID : marqueurs de la civilisation
  *  - {dimension}-editor-civilisations?ville=ID        : frontières de la ville
+ *  - {dimension}-editor-civilisations?quartier=ID     : frontières du quartier
  *
  * Les autres civilisations / villes sont affichées en lecture seule pour le
  * contexte. Les modifications restent locales jusqu'au clic sur "Save".
@@ -20,6 +21,11 @@ const CARTOGRAPHIE_EDITOR_MODES = {
     label: "Frontières",
     shapes: ["Polygon", "Rectangle"],
     defaultColor: "#3388ff",
+  },
+  quartier: {
+    label: "Frontières du quartier",
+    shapes: ["Polygon", "Rectangle"],
+    defaultColor: "#f59e0b",
   },
 };
 
@@ -70,7 +76,7 @@ function setEditorInfo(text, className = "") {
 
 async function loadCartographieEditorEntity(pathname) {
   const search = parseSearch();
-  const type = ["civilisation", "ville"].find((key) => search[key]);
+  const type = ["civilisation", "ville", "quartier"].find((key) => search[key]);
   if (!type) return null;
 
   const typeId = parseInt(search[type]);
@@ -83,6 +89,10 @@ async function loadCartographieEditorEntity(pathname) {
   let entity;
   if (type === "civilisation") {
     entity = (await shardApiGet(`/civilisations/read/${typeId}`)).civilisation;
+  } else if (type === "quartier") {
+    // Le quartier n'a pas de dimension propre : c'est celle de sa ville
+    const infos = await shardApiGet(`/civilisations/quartiers/read/${typeId}`);
+    entity = infos.quartier ? { ...infos.quartier, ville: infos.ville } : null;
   } else {
     entity = (await shardApiGet(`/civilisations/villes/id/${typeId}`)).ville;
   }
@@ -245,7 +255,7 @@ async function setupCartographieEditor(map, pathname) {
 
   if (!data) {
     renderCartographieContext(map, context, new Set());
-    setEditorInfo("Aucune civilisation ou ville sélectionnée", "badge-warning");
+    setEditorInfo("Aucune civilisation, ville ou quartier sélectionné", "badge-warning");
     return;
   }
 
@@ -302,7 +312,8 @@ async function setupCartographieEditor(map, pathname) {
     e.layer.options.pmIgnore = false;
     L.PM.reInitLayer(e.layer);
     registerCartographieLayer(e.layer, e.shape, {
-      title: data.type === "ville" ? data.entity.title : "",
+      // Frontière de ville ou de quartier : titrée d'après l'entité
+      title: data.type !== "civilisation" ? data.entity.title : "",
     });
     if (e.shape === "Text") {
       // En opt-in, geoman n'a pas pu activer la saisie au moment du dessin
@@ -332,7 +343,7 @@ async function setupCartographieEditor(map, pathname) {
     const target = data.cartographies[0]
       ? JSON.parse(data.cartographies[0].coordinates)
       : null;
-    if (data.type === "ville" && data.entity.x != null) {
+    if (data.type !== "civilisation" && data.entity.x != null) {
       map.setView([-data.entity.z, data.entity.x], map.getZoom());
     } else if (target) {
       map.setView(Array.isArray(target[0]) ? target[0] : target, map.getZoom());
@@ -450,6 +461,7 @@ function cartographieEditorBackUrl() {
   const base = String(window.UI_BASE_URL || "").replace(/\/$/, "");
   if (!cartographieEditor) return base || "/";
   const { type, typeId, entity } = cartographieEditor;
+  if (type === "quartier") return `${base}/quartier/${typeId}`;
   if (type === "ville") return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
   return `${base}/civilisation/${typeId}`;
 }
