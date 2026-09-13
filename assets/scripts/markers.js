@@ -81,6 +81,66 @@ var QuartierIcon = L.AwesomeMarkers.icon({
   iconColor: "#fff",
   markerColor: "green",
 });
+// Marqueurs de cartographie des civilisations (couleur choisie dans l'éditeur)
+var CartographieMarkerDefaultColor = "#6821a0";
+function CartographieMarkerIcon(color) {
+  return L.IconMaterial.icon({
+    icon: "flag",
+    iconColor: "#fff",
+    markerColor: color || CartographieMarkerDefaultColor,
+    outlineColor: "white",
+    outlineWidth: 0.5,
+    iconSize: [31, 42],
+  });
+}
+// Textes de cartographie en lecture seule (même rendu que la zone de texte
+// de leaflet-geoman utilisée dans l'éditeur)
+var CartographieTextDefaultColor = "#f2f2f2";
+function CartographieTextColor(color) {
+  return /^#[0-9a-f]{3,8}$/i.test(color || "") ? color : CartographieTextDefaultColor;
+}
+function CartographieTextMarker(coords, text, color, options = {}) {
+  return L.marker(coords, {
+    ...options,
+    icon: L.divIcon({
+      className: "",
+      iconSize: null,
+      iconAnchor: [0, 0],
+      html: `<div style="display:inline-block;white-space:pre;background-color:rgba(0,0,0,0.7);color:${CartographieTextColor(color)};border-radius:3px;padding:4px 7px 0 7px;font-size:13px;line-height:17px;">${escapeHtml(text)}</div>`,
+    }),
+  });
+}
+// Couleurs des religions : champ `color` de la religion s'il s'agit d'une
+// couleur CSS valide (ce qui exclut toute injection dans le HTML/SVG), sinon
+// couleur de la palette dérivée de l'identifiant. Même règle que ShardUI-2
+// (src/components/Functions/religionColor.js), une religion garde sa couleur.
+var ReligionColors = [
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#d97706",
+  "#9333ea",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
+  "#ea580c",
+  "#4f46e5",
+];
+function ReligionColor(religion) {
+  const color = typeof religion?.color === "string" ? religion.color.trim() : "";
+  if (color && CSS.supports("color", color)) return color;
+  return ReligionColors[Math.abs(parseInt(religion?.id) || 0) % ReligionColors.length];
+}
+function ReligionIcon(color) {
+  return L.IconMaterial.icon({
+    icon: "church",
+    iconColor: "#fff",
+    markerColor: color,
+    outlineColor: "white",
+    outlineWidth: 0.5,
+    iconSize: [31, 42],
+  });
+}
 var ShopIcon = L.AwesomeMarkers.icon({
   prefix: "fa",
   icon: "shop",

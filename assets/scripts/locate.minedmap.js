@@ -459,7 +459,7 @@ window.createMap = function () {
         break;
 
       case "religions":
-        // json = await MarkersReligions(pathname.data);
+        json = await MarkersReligions(pathname.data);
         break;
     }
 
@@ -498,10 +498,9 @@ window.createMap = function () {
             break;
 
           case "Text":
-            L.marker(JSON.parse(subdata.coords), {
-              textMarker: true,
-              text: subdata.text,
-            }).addTo(map); // [-z, x];";
+            CartographieTextMarker(JSON.parse(subdata.coords), subdata.text, subdata.color)
+              .addTo(map) // [-z, x]
+              .bindPopup(subdata.popup, { className: "customPopup" });
             break;
         }
       }

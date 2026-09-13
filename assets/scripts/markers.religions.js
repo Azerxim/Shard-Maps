@@ -1,21 +1,18 @@
 /**
- * Reconstruit, côté navigateur, la structure jadis produite par
- * assets/api/get/religions.php à partir de Shard-API (voir shard-api.js).
+ * Couche "religions" construite à partir de Shard-API (voir shard-api.js).
  *
- * Limites connues par rapport à l'ancien script PHP, faute d'équivalent
- * dans le nouveau modèle de données (Shard-API/api/models.py) :
- *  - `inactif` (civilisation/ville) n'existe plus : toujours considéré actif.
- *  - `parc` (ville/quartier) n'existe plus : toujours considéré à "0".
- * Ajuster ce mapping si ces champs sont réintroduits côté API.
+ * Pour chaque ville (publique) de la dimension affichée : les religions
+ * présentes et leur influence (/religions/list). Le marqueur et la frontière
+ * de la ville prennent la couleur de la religion majoritaire ; la popup
+ * détaille la répartition. Couleurs identiques à ShardUI-2 (ReligionColor,
+ * voir markers.js). Seules les religions publiques sont affichées.
  */
 
-const UI_BASE_URL = window.UI_BASE_URL || "http://localhost";
-
 async function fetchReligionsPosts(world) {
-  const [religions, dimensions, currentUser] = await Promise.all([
+  const [religions, cartographies, dimensions] = await Promise.all([
     shardApiGet("/religions/list?limit=1000"),
+    shardApiGet("/cartographie/list?limit=1000"),
     shardApiGet("/cartographie/dimensions/read?limit=1000"),
-    shardApiCurrentUser(),
   ]);
 
   const dimension = dimensions.find(
@@ -23,164 +20,109 @@ async function fetchReligionsPosts(world) {
   );
   const dimensionId = dimension ? dimension.id : null;
 
-  // console.log({ religions: religions, dimensions: dimensions, currentUser: currentUser, dimension: dimension });
-
-  const posts = {
+  return {
     religions: religions.filter((rel) => rel.religion.is_public),
+    cartographies: cartographies.filter(
+      (carto) => carto.dimension_id === dimensionId && carto.type === "ville",
+    ),
     dimension: dimension,
   };
+}
 
-  return posts;
+// Regroupe les religions par ville, triées par influence décroissante
+function religionsByVille(datas) {
+  const villes = new Map();
+
+  for (const data of datas.religions) {
+    for (const { ville, villes_religions } of data.villes) {
+      if (!datas.dimension || ville.dimension_id !== datas.dimension.id) continue;
+      if (ville.is_public === false) continue;
+
+      const entry = villes.get(ville.id) ?? { ville, religions: [] };
+      entry.religions.push({ ...data.religion, influence: villes_religions.influence });
+      villes.set(ville.id, entry);
+    }
+  }
+
+  for (const entry of villes.values()) {
+    entry.religions.sort((a, b) => (b.influence ?? 0) - (a.influence ?? 0));
+  }
+  return villes;
+}
+
+function formatInfluence(influence) {
+  if (influence == null) return "?";
+  return `${Number(influence).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`;
+}
+
+function religionsPopup(ville, religions) {
+  const rows = religions
+    .map((religion) => {
+      const color = ReligionColor(religion);
+      const width = Math.min(100, Math.max(0, religion.influence ?? 0));
+      return `
+        <a href="${UI_BASE_URL}/religion/${religion.id}" class="flex flex-col gap-1" style="color: inherit; text-decoration: none;">
+          <div class="flex flex-row items-center gap-2">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 9999px; background-color: ${color};"></span>
+            <span class="flex-1 font-bold">${escapeHtml(religion.title)}</span>
+            <span>${formatInfluence(religion.influence)}</span>
+          </div>
+          <div style="height: 6px; border-radius: 9999px; background-color: rgba(127, 127, 127, 0.25); overflow: hidden;">
+            <div style="height: 100%; width: ${width}%; background-color: ${color};"></div>
+          </div>
+        </a>`;
+    })
+    .join("");
+
+  return `
+    <div class="flex flex-col gap-2" style="min-width: 200px;">
+      <div class="flex flex-row gap-2">
+        <span>Ville:</span>
+        <b>${escapeHtml(ville.title)}</b>
+      </div>
+      ${rows}
+      <a href="${UI_BASE_URL}/civilisation/${ville.civilisation_id}/ville/${ville.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+    </div>`;
 }
 
 async function MarkersReligions(world) {
   const datas = await fetchReligionsPosts(world);
-  let polygons = [];
-  let markers = [];
-  let popup, tooltip, icon;
-  console.log({ world: world, datas: datas });
+  const polygons = [];
+  const markers = [];
 
-  const json = { polygons: polygons, markers: markers };
-  return json;
-}
+  for (const { ville, religions } of religionsByVille(datas).values()) {
+    const dominant = religions[0];
+    const color = ReligionColor(dominant);
+    const popup = religionsPopup(ville, religions);
+    const tooltip = `<b class="">${escapeHtml(ville.title)} - ${escapeHtml(dominant.title)} (${formatInfluence(dominant.influence)})</b>`;
 
-async function oldMarkersReligions(world) {
-  const response = await fetch("api/get/religions.php?data=" + world);
-  const res = await response.json();
-  const datas = res.posts;
-  let polygons = [];
-  let markers = [];
-  let popup, tooltip, icon;
-  // console.log(datas);
-  for (const one in datas) {
-    let data = datas[one];
-    // Polygons
-    popup =
-      '<a href="/rp/civilisation/' +
-      data.civid +
-      '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-      data.name +
-      "</a>";
-    tooltip = "";
-    icon = "udbIcon";
-    for (let polygon in data.polygons.villes) {
-      let subdata = data.polygons.villes[polygon];
-      if (subdata.religion.id != 0) {
-        popup =
-          '<a href="/rp/civilisation/' +
-          subdata.religion.id +
-          '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-          subdata.religion.name +
-          "</a>";
-      }
-      polygons.push({
-        type: subdata.shape,
-        dbid: subdata.cartoid,
-        option: "civ",
-        authorisation: data.authorisation,
-        coords: subdata.coords,
-        color: subdata.religion.color,
-        text: subdata.text,
-        icon: subdata.inactif ? yellowIcon : icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
-    }
-    for (let polygon in data.polygons.quartiers) {
-      let subdata = data.polygons.quartiers[polygon];
-      if (subdata.religion.id != 0) {
-        popup =
-          '<a href="/rp/civilisation/' +
-          subdata.religion.id +
-          '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-          subdata.religion.name +
-          "</a>";
-      }
-      polygons.push({
-        type: subdata.shape,
-        dbid: subdata.cartoid,
-        option: "quartier",
-        authorisation: data.authorisation,
-        coords: subdata.coords,
-        color: subdata.religion.color,
-        text: subdata.text,
-        icon: subdata.inactif ? yellowIcon : icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
-    }
-
-    // Villes
-    for (let ville in data.villes) {
-      let subdata = data.villes[ville];
-      popup =
-        '<a href="/rp/ville/' +
-        subdata.villeid +
-        '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-        subdata.name +
-        "</a>";
-      tooltip = '<b class="ultradarkblue">' + subdata.name + "</b>";
-      if (subdata.parc == "1") {
-        if (subdata.capitale == "1") {
-          icon = redIcon;
-        } else {
-          icon = cyanIcon;
-        }
-      } else {
-        if (subdata.capitale == "1") {
-          icon = CapitaleIcon;
-        } else {
-          icon = CityIcon;
-        }
-      }
-      if (data.inactif == "1") {
-        icon = yellowIcon;
-      }
+    // Marqueur Ville
+    if (ville.x != null && ville.z != null) {
       markers.push({
         type: "Markers",
-        option: "civ",
-        authorisation: data.authorisation,
-        coords:
-          "[" +
-          parseInt(-1 * subdata.coord_z) +
-          "," +
-          parseInt(subdata.coord_x) +
-          "]",
-        icon: icon,
+        option: "religion",
+        coords: JSON.stringify([-ville.z, ville.x]), // [-z, x]
+        icon: ReligionIcon(color),
         popup: popup,
         tooltip: tooltip,
       });
+    }
 
-      // Quartiers
-      let q_subdata;
-      for (let quartier in subdata.quartiers) {
-        q_subdata = subdata.quartiers[quartier];
-        tooltip = '<b class="ultradarkblue">' + q_subdata.name + "</b>";
-        if (q_subdata.parc == "1") {
-          icon = greenIcon;
-        } else {
-          icon = QuartierIcon;
-        }
-        if (data.inactif == "1") {
-          icon = yellowIcon;
-        }
-        markers.push({
-          type: "Markers",
-          option: "quartier",
-          authorisation: data.authorisation,
-          coords:
-            "[" +
-            parseInt(-1 * q_subdata.coord_z) +
-            "," +
-            parseInt(q_subdata.coord_x) +
-            "]",
-          icon: icon,
+    // Frontières Ville, colorées selon la religion majoritaire
+    datas.cartographies
+      .filter((carto) => carto.type_id === ville.id && ["Polygon", "Rectangle"].includes(carto.shape_type))
+      .forEach((carto) => {
+        polygons.push({
+          type: carto.shape_type,
+          dbid: carto.id,
+          option: "religion",
+          coords: carto.coordinates,
+          color: color,
           popup: popup,
           tooltip: tooltip,
         });
-      }
-    }
+      });
   }
-  const json = { polygons: polygons, markers: markers };
-  return json;
+
+  return { polygons: polygons, markers: markers };
 }

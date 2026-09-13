@@ -5,7 +5,7 @@
   "description": "NPM scripts for ShardUI-2-Maps",
   "scripts": {
     "init": "chmod +x start-nginx-local.sh install-nginx.sh",
-    "dev": "./start-nginx-local.sh",
+    "dev": "MAPS_ENV=development ./start-nginx-local.sh",
     "start": "./start-nginx-local.sh",
     "install:nginx": "sudo bash install-nginx.sh",
     "pm2:start": "pm2 start npm --name shardui-2-maps -- run start",

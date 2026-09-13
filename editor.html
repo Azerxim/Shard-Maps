@@ -40,12 +40,12 @@
     <script src="/assets/scripts/markers.js"></script>
     <script src="/assets/scripts/env.js"></script>
     <script src="/assets/scripts/shard-api.js"></script>
-    <!-- <script src="/assets/scripts/markers.civilisations.js"></script> -->
+    <script src="/assets/scripts/markers.civilisations.js"></script>
     <!-- <script src="/assets/scripts/markers.commerces.js"></script> -->
     <!-- <script src="/assets/scripts/markers.alliances.js"></script> -->
     <!-- <script src="/assets/scripts/markers.religions.js"></script> -->
+    <script src="/assets/scripts/editor.cartographie.js"></script>
     <script src="/assets/scripts/editor.minedmap.js"></script>
-    <script src="/assets/scripts/editor.save.js"></script>
     <script src="/assets/scripts/menu.js"></script>
   </head>
   <body class="">
@@ -87,7 +87,9 @@
       <div class="flex flex-row-reverse flex-wrap-reverse gap-2" id="OptionsButtons"></div>
       <!-- Editor Buttons -->
       <div class="flex flex-row flex-wrap-reverse gap-2" id="EditorButtons">
-				<button class="btn gap-1 rounded-box rounded-3xl btn-success" onclick="generateGeoJson()"><span>Save</span></button>
+				<button class="btn gap-1 rounded-box rounded-3xl bg-base-200" onclick="BackButton()"><i class="fa-solid fa-arrow-left"></i><span>Retour</span></button>
+				<span id="EditorInfo" class="badge badge-lg h-auto py-2 rounded-3xl">Chargement...</span>
+				<button class="btn gap-1 rounded-box rounded-3xl btn-success" onclick="saveCartographie()"><span>Save</span></button>
 				<button class="btn gap-1 rounded-box rounded-3xl btn-error" onclick="CancelButton()"><span>Annuler</span></button>
 			</div>
     </div>

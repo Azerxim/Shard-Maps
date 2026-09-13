@@ -46,7 +46,7 @@
       "title": "Religions",
       "icon": "fa-solid fa-place-of-worship",
       "class": "",
-      "hidden": 1
+      "hidden": 0
     }
   },
   "buttons": {

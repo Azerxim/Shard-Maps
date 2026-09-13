@@ -22,6 +22,10 @@
  */
 const SHARD_API_BASE_URL = window.SHARD_API_BASE_URL || "http://localhost:8000/api";
 
+// URL de ShardUI-2 pour les liens des popups, partagée par les scripts
+// markers.*.js (une seule déclaration : ils peuvent être chargés ensemble).
+const UI_BASE_URL = window.UI_BASE_URL || "http://localhost";
+
 async function shardApiGet(path) {
   const headers = { "Content-Type": "application/json" };
 
@@ -34,6 +38,92 @@ async function shardApiGet(path) {
   const json = await response.json();
   // console.log("Shard-API GET " + SHARD_API_BASE_URL + path + " -> " + JSON.stringify(json));
   return json;
+}
+
+// Requête authentifiée (POST / PUT / DELETE). En cas d'erreur, le message
+// renvoyé par Shard-API (champ `detail`) est remonté dans l'exception.
+async function shardApiRequest(method, path, body) {
+  const token = await shardApiToken();
+  if (!token) {
+    throw new Error(
+      "Vous n'êtes pas connecté : ouvrez l'éditeur depuis le site Tetrago."
+    );
+  }
+
+  const response = await fetch(SHARD_API_BASE_URL + path, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 401) sessionStorage.removeItem("token");
+    const detail = json && json.detail;
+    throw new Error(
+      typeof detail === "string" ? detail : response.status + " " + response.statusText
+    );
+  }
+  return json;
+}
+
+// Jeton d'authentification de l'éditeur.
+// ShardUI-2 et ShardUI-2-Maps sont servis sur des origines différentes : le
+// localStorage n'est donc pas partagé. Quand l'éditeur est ouvert depuis
+// ShardUI-2 (window.open), il demande le jeton à la page d'origine par
+// postMessage, en n'acceptant que les réponses venant de UI_BASE_URL. Le jeton
+// est ensuite conservé dans le sessionStorage de l'onglet (survit aux
+// rechargements après sauvegarde).
+let shardApiTokenPromise = null;
+
+function shardApiToken() {
+  shardApiTokenPromise ??= shardApiRequestToken();
+  return shardApiTokenPromise;
+}
+
+function shardApiRequestToken() {
+  const stored = sessionStorage.getItem("token") || localStorage.getItem("token");
+  if (stored) return Promise.resolve(stored);
+  const uiOrigins = shardApiAllowedUiOrigins();
+  if (!window.opener || uiOrigins.length === 0) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const finish = (token) => {
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMessage);
+      resolve(token);
+    };
+    const onMessage = (event) => {
+      if (!uiOrigins.includes(event.origin) || event.source !== window.opener) return;
+      if (event.data?.source !== "shardui" || event.data?.type !== "editor-auth") return;
+      if (event.data.token) sessionStorage.setItem("token", event.data.token);
+      finish(event.data.token || null);
+    };
+    const timeout = setTimeout(() => finish(null), 5000);
+
+    window.addEventListener("message", onMessage);
+    // L'origine de l'opener n'est pas lisible : on envoie la demande à chaque
+    // origine autorisée, le navigateur ne la délivre qu'à celle qui correspond.
+    for (const uiOrigin of uiOrigins) {
+      window.opener.postMessage({ source: "minedmap", type: "editor-auth-request" }, uiOrigin);
+    }
+  });
+}
+
+// UI_BASE_URL + UI_ALLOWED_ORIGINS (séparées par des virgules), voir .env.example
+function shardApiAllowedUiOrigins() {
+  const urls = [window.UI_BASE_URL, ...String(window.UI_ALLOWED_ORIGINS || "").split(",")];
+  const origins = [];
+  for (const url of urls) {
+    try {
+      if (url && url.trim()) origins.push(new URL(url.trim()).origin);
+    } catch (e) {
+      console.warn("Origine UI invalide ignorée : " + url);
+    }
+  }
+  return [...new Set(origins)];
 }
 
 // Renvoie l'utilisateur courant (via /users/me), ou null si non connecté /

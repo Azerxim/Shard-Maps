@@ -9,8 +9,6 @@
  * Ajuster ce mapping si ces champs sont réintroduits côté API.
  */
 
-const UI_BASE_URL = window.UI_BASE_URL || "http://localhost";
-
 async function fetchCivilisationsPosts(world) {
   const [civilisations, cartographies, dimensions, currentUser] =
     await Promise.all([
@@ -59,38 +57,43 @@ async function MarkersCivilisations(world) {
         carto.type_id === civilisation.id && carto.type === "civilisation",
     );
     let villes = data.villes;
-    // Polygons
-    popup = `<a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-primary btn-sm" style="">${civilisation.title}</a>`;
-    tooltip = "";
-    icon = "udbIcon";
 
-    // Polygon data
-    civ_carto.forEach((polygon) => {
+    // Marqueurs (et éventuels polygones) de la civilisation
+    civ_carto.forEach((carto) => {
       popup = `
           <div class="flex flex-col gap-2">
             <div class="flex flex-row gap-2">
-              <span>Ville:</span>
-              <span>${polygon.title}</span>
+              <span>Civilisation:</span>
+              <span>${escapeHtml(civilisation.title)}</span>
             </div>
-            <div class="flex flex-row gap-2">
-              <span>Description:</span>
-              <span>${polygon.description}</span>
-            </div>
+            ${carto.title ? `<b>${escapeHtml(carto.title)}</b>` : ""}
+            ${carto.description ? `<span>${escapeHtml(carto.description)}</span>` : ""}
             <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
           </div>`;
-      tooltip = ``;
-      polygons.push({
-        type: polygon.shape_type,
-        dbid: polygon.id,
-        option: "civ",
-        // authorisation: data.authorisation,
-        coords: polygon.coordinates,
-        color: polygon.color,
-        text: polygon.text,
-        icon: icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
+      tooltip = `<b class="">${escapeHtml(civilisation.title)}${carto.title ? " - " + escapeHtml(carto.title) : ""}</b>`;
+
+      if (carto.shape_type === "Marker") {
+        markers.push({
+          type: "Markers",
+          dbid: carto.id,
+          option: "civ",
+          coords: carto.coordinates,
+          icon: CartographieMarkerIcon(carto.color),
+          popup: popup,
+          tooltip: tooltip,
+        });
+      } else {
+        polygons.push({
+          type: carto.shape_type,
+          dbid: carto.id,
+          option: "civ",
+          coords: carto.coordinates,
+          color: carto.color,
+          text: carto.text,
+          popup: popup,
+          tooltip: tooltip,
+        });
+      }
     });
 
     // Villes
@@ -100,16 +103,16 @@ async function MarkersCivilisations(world) {
       <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-2">
           <span>Civilisation:</span>
-          <span>${civilisation.title}</span>
+          <span>${escapeHtml(civilisation.title)}</span>
         </div>
         <div class="flex flex-row gap-2">
           <span>Ville:</span>
-          <span>${subdata.title}</span>
+          <span>${escapeHtml(subdata.title)}</span>
         </div>
-        <a href="${UI_BASE_URL}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+        <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
         <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
       </div>`;
-      tooltip = `<b class="">${civilisation.title} - ${subdata.title}</b>`;
+      tooltip = `<b class="">${escapeHtml(civilisation.title)} - ${escapeHtml(subdata.title)}</b>`;
       if (subdata.is_capital == "1") {
         icon = CapitaleIcon;
       } else {
@@ -128,7 +131,7 @@ async function MarkersCivilisations(world) {
         tooltip: tooltip,
       });
 
-      // Polygons Ville
+      // Frontières Ville
       let ville_carto = datas.cartographies.filter(
         (carto) => carto.type_id === subdata.id && carto.type === "ville",
       );
@@ -137,13 +140,11 @@ async function MarkersCivilisations(world) {
           <div class="flex flex-col gap-2">
             <div class="flex flex-row gap-2">
               <span>Ville:</span>
-              <span>${polygon.title}</span>
+              <span>${escapeHtml(subdata.title)}</span>
             </div>
-            <div class="flex flex-row gap-2">
-              <span>Description:</span>
-              <span>${polygon.description}</span>
-            </div>
-            <a href="${UI_BASE_URL}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+            ${polygon.title && polygon.title !== subdata.title ? `<b>${escapeHtml(polygon.title)}</b>` : ""}
+            ${polygon.description ? `<span>${escapeHtml(polygon.description)}</span>` : ""}
+            <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
             <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
           </div>`;
         tooltip = ``;
