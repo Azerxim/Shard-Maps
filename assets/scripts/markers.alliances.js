@@ -1,180 +1,107 @@
 /**
- * Reconstruit, côté navigateur, la structure jadis produite par
- * assets/api/get/alliances.php à partir de Shard-API (voir shard-api.js).
- *
- * Limites connues par rapport à l'ancien script PHP, faute d'équivalent
- * dans le nouveau modèle de données (Shard-API/api/models.py) :
- *  - `inactif` (civilisation/ville) n'existe plus : toujours considéré actif.
- *  - `parc` (ville/quartier) n'existe plus : toujours considéré à "0".
- * Ajuster ce mapping si ces champs sont réintroduits côté API.
+ * Calque « Alliances » : villes et frontières des civilisations membres d'une alliance publique,
+ * aux couleurs de leur alliance (Shard-API /alliances/list, voir shard-api.js).
+ * Une civilisation membre de plusieurs alliances prend la couleur de son alliance militaire en priorité.
+ * UI_BASE_URL est déclarée par shard-api.js.
  */
 
-const UI_BASE_URL = window.UI_BASE_URL || "http://localhost";
-
 async function fetchAlliancesPosts(world) {
-  const [alliances, dimensions, currentUser] = await Promise.all([
-    shardApiGet("/alliances/list?limit=1000"),
+  const [alliances, civilisations, cartographies, dimensions] = await Promise.all([
+    shardApiGet("/alliances/list"),
+    shardApiGet("/civilisations/list?limit=1000"),
+    shardApiGet("/cartographie/list?limit=1000"),
     shardApiGet("/cartographie/dimensions/read?limit=1000"),
-    shardApiCurrentUser(),
   ]);
 
   const dimension = dimensions.find(
     (d) => (d.link || "").toLowerCase() === String(world).toLowerCase(),
   );
-  const dimensionId = dimension ? dimension.id : null;
 
-  // console.log({ alliances: alliances, dimensions: dimensions, currentUser: currentUser, dimension: dimension });
-
-  const posts = {
-    alliances: alliances.filter((all) => all.alliance.is_public),
-    dimension: dimension,
-  };
-
-  return posts;
-}
-
-async function MarkersAlliances(world) {
-  const datas = await fetchAlliancesPosts(world);
-  let polygons = [];
-  let markers = [];
-  let popup, tooltip, icon;
-  console.log({ world: world, datas: datas });
-
-  const json = { polygons: polygons, markers: markers };
-  return json;
-}
-
-async function oldMarkersAlliances(world) {
-  const response = await fetch("api/get/alliances.php?data=" + world);
-  const res = await response.json();
-  const datas = res.posts;
-  let polygons = [];
-  let markers = [];
-  let popup, tooltip;
-  console.log(datas);
-  for (const one in datas) {
-    let data = datas[one];
-    // Polygons
-    if (data.alliance.id == 0) {
-      popup =
-        '<a href="/rp/civilisation/' +
-        data.civid +
-        '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-        data.name +
-        "</a>";
-    } else {
-      popup =
-        '<a href="/rp/civilisation/' +
-        data.alliance.id +
-        '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-        data.alliance.name +
-        "</a>";
-    }
-    tooltip = "";
-    icon = "udbIcon";
-    for (let polygon in data.polygons.villes) {
-      let subdata = data.polygons.villes[polygon];
-      polygons.push({
-        type: subdata.shape,
-        dbid: subdata.cartoid,
-        option: "civ",
-        authorisation: data.authorisation,
-        coords: subdata.coords,
-        color: data.alliance.color,
-        text: subdata.text,
-        icon: subdata.inactif ? yellowIcon : icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
-    }
-    for (let polygon in data.polygons.quartiers) {
-      let subdata = data.polygons.quartiers[polygon];
-      polygons.push({
-        type: subdata.shape,
-        dbid: subdata.cartoid,
-        option: "quartier",
-        authorisation: data.authorisation,
-        coords: subdata.coords,
-        color: data.alliance.color,
-        text: subdata.text,
-        icon: subdata.inactif ? yellowIcon : icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
-    }
-
-    // Villes
-    for (let ville in data.villes) {
-      let subdata = data.villes[ville];
-      popup =
-        '<a href="/rp/ville/' +
-        subdata.villeid +
-        '" class="button is-TD-smoothwhite" style="height: 30px;">' +
-        subdata.name +
-        "</a>";
-      tooltip = '<b class="ultradarkblue">' + subdata.name + "</b>";
-      if (subdata.parc == "1") {
-        if (subdata.capitale == "1") {
-          icon = redIcon;
-        } else {
-          icon = cyanIcon;
-        }
-      } else {
-        if (subdata.capitale == "1") {
-          icon = CapitaleIcon;
-        } else {
-          icon = CityIcon;
-        }
-      }
-      if (data.inactif == "1") {
-        icon = yellowIcon;
-      }
-      markers.push({
-        type: "Markers",
-        option: "civ",
-        authorisation: data.authorisation,
-        coords:
-          "[" +
-          parseInt(-1 * subdata.coord_z) +
-          "," +
-          parseInt(subdata.coord_x) +
-          "]",
-        icon: icon,
-        popup: popup,
-        tooltip: tooltip,
-      });
-
-      // Quartiers
-      let q_subdata;
-      for (let quartier in subdata.quartiers) {
-        q_subdata = subdata.quartiers[quartier];
-        tooltip = '<b class="ultradarkblue">' + q_subdata.name + "</b>";
-        if (q_subdata.parc == "1") {
-          icon = greenIcon;
-        } else {
-          icon = QuartierIcon;
-        }
-        if (data.inactif == "1") {
-          icon = yellowIcon;
-        }
-        markers.push({
-          type: "Markers",
-          option: "quartier",
-          authorisation: data.authorisation,
-          coords:
-            "[" +
-            parseInt(-1 * q_subdata.coord_z) +
-            "," +
-            parseInt(q_subdata.coord_x) +
-            "]",
-          icon: icon,
-          popup: popup,
-          tooltip: tooltip,
-        });
+  const allianceOfCivilisation = new Map();
+  const publiques = alliances
+    .filter(({ alliance }) => alliance.is_public !== false)
+    .sort((a, b) => Number(a.alliance.type !== "Militaire") - Number(b.alliance.type !== "Militaire"));
+  for (const entry of publiques) {
+    for (const membre of entry.membres) {
+      if (!allianceOfCivilisation.has(membre.civilisation.id)) {
+        allianceOfCivilisation.set(membre.civilisation.id, { ...entry, role: membre.role });
       }
     }
   }
 
-  const json = { polygons: polygons, markers: markers };
-  return json;
+  return {
+    dimension: dimension,
+    allianceOfCivilisation: allianceOfCivilisation,
+    civilisations: civilisations.filter((civ) => civ.civilisation.is_public),
+    cartographies: cartographies.filter((carto) => dimension && carto.dimension_id === dimension.id),
+  };
+}
+
+function alliancePopup(entry, civilisation, ville) {
+  return `
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-row gap-2">
+        <span>Alliance:</span>
+        <b>${escapeHtml(entry.alliance.title)}</b>
+      </div>
+      <div class="flex flex-row gap-2">
+        <span>Type:</span>
+        <span>${escapeHtml(entry.alliance.type)}</span>
+      </div>
+      <div class="flex flex-row gap-2">
+        <span>Civilisation:</span>
+        <span>${escapeHtml(civilisation.title)} (${escapeHtml(entry.role)})</span>
+      </div>
+      ${ville ? `<div class="flex flex-row gap-2"><span>Ville:</span><span>${escapeHtml(ville.title)}</span></div>` : ""}
+      <a href="${UI_BASE_URL}/alliance/${entry.alliance.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir l'alliance</a>
+      <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
+    </div>`;
+}
+
+async function MarkersAlliances(world) {
+  const datas = await fetchAlliancesPosts(world);
+  const polygons = [];
+  const markers = [];
+  if (!datas.dimension) {
+    return { polygons: polygons, markers: markers };
+  }
+
+  for (const { civilisation, villes } of datas.civilisations) {
+    const entry = datas.allianceOfCivilisation.get(civilisation.id);
+    if (!entry) continue;
+    const color = entry.alliance.color || "#6b7280";
+
+    for (const ville of villes || []) {
+      if (ville.dimension_id !== datas.dimension.id || ville.is_public === false) continue;
+      const popup = alliancePopup(entry, civilisation, ville);
+
+      if (ville.x != null && ville.z != null) {
+        markers.push({
+          type: "Markers",
+          option: "alliance",
+          coords: JSON.stringify([-ville.z, ville.x]), // [-z, x]
+          icon: CartographieMarkerIcon(color),
+          popup: popup,
+          tooltip: `<b class="">${escapeHtml(entry.alliance.title)} - ${escapeHtml(ville.title)}</b>`,
+        });
+      }
+
+      datas.cartographies
+        .filter((carto) => carto.type === "ville" && carto.type_id === ville.id && ["Polygon", "Rectangle"].includes(carto.shape_type))
+        .forEach((polygon) => {
+          polygons.push({
+            type: polygon.shape_type,
+            dbid: polygon.id,
+            option: "alliance",
+            coords: polygon.coordinates,
+            color: color,
+            text: polygon.text,
+            popup: popup,
+            tooltip: ``,
+          });
+        });
+    }
+  }
+
+  return { polygons: polygons, markers: markers };
 }

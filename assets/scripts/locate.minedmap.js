@@ -455,7 +455,7 @@ window.createMap = function () {
         break;
 
       case "alliances":
-        // json = await MarkersAlliances(pathname.data);
+        json = await MarkersAlliances(pathname.data);
         break;
 
       case "religions":

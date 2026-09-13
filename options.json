@@ -40,7 +40,7 @@
       "title": "Alliances",
       "icon": "fa-solid fa-handshake",
       "class": "",
-      "hidden": 1
+      "hidden": 0
     },
     "religions": {
       "title": "Religions",
