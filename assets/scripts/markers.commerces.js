@@ -42,7 +42,7 @@ async function MarkersCommerces(world) {
     return { polygons: polygons, markers: markers };
   }
 
-  for (const { commerce, owner, magasins } of datas.commerces) {
+  for (const { commerce, fondateur, magasins } of datas.commerces) {
     for (const magasin of magasins || []) {
       if (!magasin.is_public || magasin.dimension_id !== datas.dimension.id) continue;
       if (magasin.x == null || magasin.z == null) continue;
@@ -59,7 +59,7 @@ async function MarkersCommerces(world) {
             <span>${escapeHtml(magasin.title)}</span>
           </div>
           ${ville ? `<div class="flex flex-row gap-2"><span>Ville:</span><span>${escapeHtml(ville.title)}</span></div>` : ""}
-          ${owner ? `<div class="flex flex-row gap-2"><span>Propriétaire:</span><span>${escapeHtml(owner.full_name || owner.username)}</span></div>` : ""}
+          ${fondateur ? `<div class="flex flex-row gap-2"><span>Fondateur:</span><span>${escapeHtml(fondateur.full_name || fondateur.username)}</span></div>` : ""}
           ${magasin.description ? `<span>${escapeHtml(magasin.description)}</span>` : ""}
           <a href="${UI_BASE_URL}/commerce/${commerce.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir le commerce</a>
         </div>`;
