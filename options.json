@@ -34,7 +34,7 @@
       "title": "Commerces",
       "icon": "fa-solid fa-shop",
       "class": "",
-      "hidden": 1
+      "hidden": 0
     },
     "alliances": {
       "title": "Alliances",

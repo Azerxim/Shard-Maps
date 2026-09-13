@@ -96,9 +96,10 @@ async function MarkersCivilisations(world) {
       }
     });
 
-    // Villes
+    // Villes (uniquement celles de la dimension affichée)
     for (let ville in villes) {
       let subdata = villes[ville];
+      if (!datas.dimension || subdata.dimension_id !== datas.dimension.id) continue;
       popup = `
       <div class="flex flex-col gap-2">
         <div class="flex flex-row gap-2">

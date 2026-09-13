@@ -442,7 +442,7 @@ window.createMap = function () {
         break;
 
       case "commerces":
-        // json = await MarkersCommerces(pathname.data);
+        json = await MarkersCommerces(pathname.data);
         break;
 
       case "alliances":

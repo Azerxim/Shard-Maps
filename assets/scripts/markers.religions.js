@@ -6,13 +6,21 @@
  * de la ville prennent la couleur de la religion majoritaire ; la popup
  * détaille la répartition. Couleurs identiques à ShardUI-2 (ReligionColor,
  * voir markers.js). Seules les religions publiques sont affichées.
+ * Les villes sans religion (publique) sont affichées en gris.
  */
 
+const SANS_RELIGION_COLOR = "#9ca3af";
+
 async function fetchReligionsPosts(world) {
-  const [religions, cartographies, dimensions] = await Promise.all([
+  const [religions, cartographies, dimensions, villes] = await Promise.all([
     shardApiGet("/religions/list?limit=1000"),
     shardApiGet("/cartographie/list?limit=1000"),
     shardApiGet("/cartographie/dimensions/read?limit=1000"),
+    // Toutes les villes, pour afficher aussi celles sans religion (sans bloquer la couche en cas d'erreur)
+    shardApiGet("/civilisations/villes/list?limit=1000").catch((error) => {
+      console.error(error);
+      return [];
+    }),
   ]);
 
   const dimension = dimensions.find(
@@ -25,13 +33,21 @@ async function fetchReligionsPosts(world) {
     cartographies: cartographies.filter(
       (carto) => carto.dimension_id === dimensionId && carto.type === "ville",
     ),
+    villes: villes,
     dimension: dimension,
   };
 }
 
-// Regroupe les religions par ville, triées par influence décroissante
+// Regroupe les religions par ville, triées par influence décroissante.
+// Chaque ville publique de la dimension est présente, avec une liste vide si elle n'a aucune religion.
 function religionsByVille(datas) {
   const villes = new Map();
+
+  for (const ville of datas.villes) {
+    if (!datas.dimension || ville.dimension_id !== datas.dimension.id) continue;
+    if (ville.is_public === false) continue;
+    villes.set(ville.id, { ville, religions: [] });
+  }
 
   for (const data of datas.religions) {
     for (const { ville, villes_religions } of data.villes) {
@@ -56,7 +72,9 @@ function formatInfluence(influence) {
 }
 
 function religionsPopup(ville, religions) {
-  const rows = religions
+  const rows = religions.length === 0
+    ? `<span class="italic" style="opacity: 0.7;">Aucune religion</span>`
+    : religions
     .map((religion) => {
       const color = ReligionColor(religion);
       const width = Math.min(100, Math.max(0, religion.influence ?? 0));
@@ -92,9 +110,11 @@ async function MarkersReligions(world) {
 
   for (const { ville, religions } of religionsByVille(datas).values()) {
     const dominant = religions[0];
-    const color = ReligionColor(dominant);
+    const color = dominant ? ReligionColor(dominant) : SANS_RELIGION_COLOR;
     const popup = religionsPopup(ville, religions);
-    const tooltip = `<b class="">${escapeHtml(ville.title)} - ${escapeHtml(dominant.title)} (${formatInfluence(dominant.influence)})</b>`;
+    const tooltip = dominant
+      ? `<b class="">${escapeHtml(ville.title)} - ${escapeHtml(dominant.title)} (${formatInfluence(dominant.influence)})</b>`
+      : `<b class="">${escapeHtml(ville.title)} - Sans religion</b>`;
 
     // Marqueur Ville
     if (ville.x != null && ville.z != null) {
