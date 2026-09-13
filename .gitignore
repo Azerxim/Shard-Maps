@@ -33,3 +33,8 @@ datas/
 data_new/
 data_old/
 viewer/
+
+# Génération des cartes (scripts/map-generator)
+scripts/map-generator/.cache/
+scripts/map-generator/.venv/
+scripts/map-generator/work/

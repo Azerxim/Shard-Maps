@@ -1,0 +1,34 @@
+{
+  "maps": [
+    {
+      "name": "tetrago",
+      "label": "Tetrago",
+      "group": "vanilla",
+      "source": "",
+      "generator": "minedmap"
+    },
+    {
+      "name": "nether",
+      "label": "Nether:surface",
+      "group": "vanilla",
+      "source": "DIM-1",
+      "generator": "legacy_nether"
+    },
+    {
+      "name": "nether_toit",
+      "label": "Nether:toit",
+      "group": "vanilla",
+      "source": "DIM-1",
+      "generator": "minedmap"
+    },
+    {
+      "name": "end",
+      "label": "End",
+      "group": "vanilla",
+      "source": "DIM1",
+      "generator": "minedmap",
+      "enabled": false
+    }
+  ],
+  "custom_dimensions": false
+}

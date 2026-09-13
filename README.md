@@ -60,6 +60,26 @@ npm run pm2:delete    # supprime le process pm2
 
 Voir [NGINX-SETUP.md](NGINX-SETUP.md) pour le détail des règles de configuration nginx (routes de cartes, embed, éditeur, API) et le dépannage.
 
+## Génération hebdomadaire des cartes
+
+[scripts/map-generator](scripts/map-generator) récupère le monde hébergé sur Minestrator et regénère les tuiles de `assets/data`, en s'appuyant sur les binaires MinedMap de [MinedMap Viewer Generator](https://github.com/Azerxim/MinedMap-Viewer-Generator).
+
+1. **Récupération** : l'API Minestrator ne permet pas de télécharger les sauvegardes ; le monde est donc copié par SFTP (`level.dat` et dossiers `region` uniquement, seuls les fichiers modifiés sont téléchargés). Pendant la copie, `save-off` / `save-all flush` puis `save-on` sont envoyés via l'API.
+2. **Génération** : incrémentale dans `scripts/map-generator/work/output` (seules les régions modifiées sont redessinées).
+3. **Publication** : chaque carte réussie est copiée dans `assets/data/<nom>` et `maps.json` est mis à jour. Une carte en erreur garde ses anciennes tuiles.
+
+Les cartes générées sont définies dans [maps.config.json](scripts/map-generator/maps.config.json) (`tetrago`, `nether`, `nether_toit`, `end` désactivé, dimensions personnalisées en option).
+
+```bash
+cp .env.example .env         # renseigner MINESTRATOR_API_KEY, MINESTRATOR_SERVER_ID, MINESTRATOR_SFTP_PASSWORD
+npm run maps:generate        # exécution manuelle (crée .venv et récupère MinedMap au premier lancement)
+npm run maps:generate:local  # regénérer depuis la copie locale, sans téléchargement
+npm run maps:cron:install    # tâche cron hebdomadaire (lundi 4h00)
+npm run maps:cron:remove     # retirer la tâche cron
+```
+
+Options : `run.sh --update-tools` (met à jour paramiko et MinedMap), `--only tetrago`, `--no-publish`. Journaux dans `logs/map-generator/` (12 semaines conservées).
+
 ## Structure du projet
 
 ```

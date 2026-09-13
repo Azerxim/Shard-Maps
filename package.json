@@ -4,7 +4,11 @@
   "private": true,
   "description": "NPM scripts for ShardUI-2-Maps",
   "scripts": {
-    "init": "chmod +x start-nginx-local.sh install-nginx.sh",
+    "init": "chmod +x start-nginx-local.sh install-nginx.sh scripts/map-generator/run.sh scripts/map-generator/install-cron.sh",
+    "maps:generate": "bash scripts/map-generator/run.sh",
+    "maps:generate:local": "bash scripts/map-generator/run.sh --skip-download",
+    "maps:cron:install": "bash scripts/map-generator/install-cron.sh",
+    "maps:cron:remove": "bash scripts/map-generator/install-cron.sh --remove",
     "dev": "MAPS_ENV=development ./start-nginx-local.sh",
     "start": "./start-nginx-local.sh",
     "install:nginx": "sudo bash install-nginx.sh",
