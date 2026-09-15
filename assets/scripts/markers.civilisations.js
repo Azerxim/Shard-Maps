@@ -9,18 +9,35 @@
  * Ajuster ce mapping si ces champs sont réintroduits côté API.
  */
 
+// Données facultatives : leur échec ne doit pas empêcher l'affichage des civilisations
+function shardApiGetOptional(path, fallback) {
+  return shardApiGet(path).catch((error) => {
+    console.error(error);
+    return fallback;
+  });
+}
+
+// Ligne « Habitants » des popups : personnages dont la résidence est cette ville ou ce quartier
+function habitantsLine(count) {
+  if (!count) return "";
+  return `
+        <div class="flex flex-row gap-2">
+          <span>Habitants:</span>
+          <span>${count} personnage${count > 1 ? "s" : ""}</span>
+        </div>`;
+}
+
 async function fetchCivilisationsPosts(world) {
-  const [civilisations, cartographies, dimensions, currentUser, quartiers] =
+  const [civilisations, cartographies, dimensions, currentUser, quartiers, habitantsVilles, habitantsQuartiers] =
     await Promise.all([
       shardApiGet("/civilisations/list?limit=1000"),
       shardApiGet("/cartographie/list?limit=1000"),
       shardApiGet("/cartographie/dimensions/read?limit=1000"),
       shardApiCurrentUser(),
-      // Les quartiers ne doivent pas empêcher l'affichage des civilisations
-      shardApiGet("/civilisations/quartiers/list?limit=1000").catch((error) => {
-        console.error(error);
-        return [];
-      }),
+      shardApiGetOptional("/civilisations/quartiers/list?limit=1000", []),
+      // { id de la ville (ou du quartier): nombre de personnages }
+      shardApiGetOptional("/personnages/habitants/ville", {}),
+      shardApiGetOptional("/personnages/habitants/quartier", {}),
     ]);
 
   const dimension = dimensions.find(
@@ -43,6 +60,7 @@ async function fetchCivilisationsPosts(world) {
     ),
     dimension: dimension,
     quartiers: quartiers.filter((quartier) => quartier.is_public !== false),
+    habitants: { villes: habitantsVilles || {}, quartiers: habitantsQuartiers || {} },
   };
 
   return posts;
@@ -115,7 +133,7 @@ async function MarkersCivilisations(world) {
         <div class="flex flex-row gap-2">
           <span>Ville:</span>
           <span>${escapeHtml(subdata.title)}</span>
-        </div>
+        </div>${habitantsLine(datas.habitants.villes[subdata.id])}
         <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
         <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
       </div>`;
@@ -150,7 +168,7 @@ async function MarkersCivilisations(world) {
               <span>${escapeHtml(subdata.title)}</span>
             </div>
             ${polygon.title && polygon.title !== subdata.title ? `<b>${escapeHtml(polygon.title)}</b>` : ""}
-            ${polygon.description ? `<span>${escapeHtml(polygon.description)}</span>` : ""}
+            ${polygon.description ? `<span>${escapeHtml(polygon.description)}</span>` : ""}${habitantsLine(datas.habitants.villes[subdata.id])}
             <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
             <a href="${UI_BASE_URL}/civilisation/${civilisation.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la civilisation</a>
           </div>`;
@@ -181,7 +199,7 @@ async function MarkersCivilisations(world) {
             <div class="flex flex-row gap-2">
               <span>Quartier:</span>
               <b>${escapeHtml(quartier.title)}</b>
-            </div>
+            </div>${habitantsLine(datas.habitants.quartiers[quartier.id])}
             <a href="${UI_BASE_URL}/quartier/${quartier.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir le quartier</a>
             <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${subdata.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
           </div>`;

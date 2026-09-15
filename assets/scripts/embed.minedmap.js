@@ -452,6 +452,10 @@ window.createMap = function () {
       case "religions":
         json = await MarkersReligions(pathname.data);
         break;
+
+      case "guerres":
+        json = await MarkersGuerres(pathname.data);
+        break;
     }
 
     // console.log('json:', json);

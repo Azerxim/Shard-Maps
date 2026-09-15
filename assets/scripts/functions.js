@@ -19,6 +19,7 @@ const parsePathName = function () {
         case "commerces":
         case "alliances":
         case "religions":
+        case "guerres":
           key = "option";
           break;
 

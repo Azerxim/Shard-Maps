@@ -5,6 +5,7 @@
  *  - {dimension}-editor-civilisations?civilisation=ID : marqueurs de la civilisation
  *  - {dimension}-editor-civilisations?ville=ID        : frontières de la ville
  *  - {dimension}-editor-civilisations?quartier=ID     : frontières du quartier
+ *  - {dimension}-editor-civilisations?guerre=ID       : zones de conflit d'une guerre en cours
  *
  * Les autres civilisations / villes sont affichées en lecture seule pour le
  * contexte. Les modifications restent locales jusqu'au clic sur "Save".
@@ -26,6 +27,11 @@ const CARTOGRAPHIE_EDITOR_MODES = {
     label: "Frontières du quartier",
     shapes: ["Polygon", "Rectangle"],
     defaultColor: "#f59e0b",
+  },
+  guerre: {
+    label: "Zones de conflit",
+    shapes: ["Polygon", "Rectangle", "Marker"],
+    defaultColor: "#dc2626",
   },
 };
 
@@ -76,7 +82,7 @@ function setEditorInfo(text, className = "") {
 
 async function loadCartographieEditorEntity(pathname) {
   const search = parseSearch();
-  const type = ["civilisation", "ville", "quartier"].find((key) => search[key]);
+  const type = ["civilisation", "ville", "quartier", "guerre"].find((key) => search[key]);
   if (!type) return null;
 
   const typeId = parseInt(search[type]);
@@ -89,6 +95,9 @@ async function loadCartographieEditorEntity(pathname) {
   let entity;
   if (type === "civilisation") {
     entity = (await shardApiGet(`/civilisations/read/${typeId}`)).civilisation;
+  } else if (type === "guerre") {
+    // Guerre publique uniquement : les zones se tracent une fois la guerre validée
+    entity = (await shardApiGet(`/guerres/read/${typeId}`)).guerre;
   } else if (type === "quartier") {
     // Le quartier n'a pas de dimension propre : c'est celle de sa ville
     const infos = await shardApiGet(`/civilisations/quartiers/read/${typeId}`);
@@ -255,7 +264,7 @@ async function setupCartographieEditor(map, pathname) {
 
   if (!data) {
     renderCartographieContext(map, context, new Set());
-    setEditorInfo("Aucune civilisation, ville ou quartier sélectionné", "badge-warning");
+    setEditorInfo("Aucune civilisation, ville, quartier ou guerre sélectionné", "badge-warning");
     return;
   }
 
@@ -352,7 +361,7 @@ async function setupCartographieEditor(map, pathname) {
 
   if (!(await shardApiToken())) {
     setEditorInfo(
-      "Non connecté : ouvrez l'éditeur depuis le site Tetrago pour sauvegarder",
+      "Non connecté : " + (shardApiAuthError() || "ouvrez l'éditeur depuis le site Tetrago pour sauvegarder"),
       "badge-warning",
     );
   }
@@ -427,6 +436,8 @@ async function saveCartographie() {
       confirmButtonText: "Ok",
     });
   } else {
+    // La connexion a pu être rétablie entre-temps : le badge « Non connecté » n'a plus lieu d'être
+    setEditorInfo(`${cartographieEditor.mode.label} : ${cartographieEditor.entity.title}`, "badge-primary");
     swal({
       title: "",
       text: count ? "Modifications enregistrées" : "Aucune modification à enregistrer",
@@ -461,6 +472,7 @@ function cartographieEditorBackUrl() {
   const base = String(window.UI_BASE_URL || "").replace(/\/$/, "");
   if (!cartographieEditor) return base || "/";
   const { type, typeId, entity } = cartographieEditor;
+  if (type === "guerre") return `${base}/guerre/${typeId}`;
   if (type === "quartier") return `${base}/quartier/${typeId}`;
   if (type === "ville") return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
   return `${base}/civilisation/${typeId}`;

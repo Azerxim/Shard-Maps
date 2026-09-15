@@ -47,6 +47,12 @@
       "icon": "fa-solid fa-place-of-worship",
       "class": "",
       "hidden": 0
+    },
+    "guerres": {
+      "title": "Guerres",
+      "icon": "fa-solid fa-shield-halved",
+      "class": "",
+      "hidden": 0
     }
   },
   "buttons": {

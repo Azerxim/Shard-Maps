@@ -46,21 +46,33 @@ async function shardApiRequest(method, path, body) {
   const token = await shardApiToken();
   if (!token) {
     throw new Error(
-      "Vous n'êtes pas connecté : ouvrez l'éditeur depuis le site Tetrago."
+      shardApiAuthError() || "Vous n'êtes pas connecté : ouvrez l'éditeur depuis le site Tetrago."
     );
   }
 
-  const response = await fetch(SHARD_API_BASE_URL + path, {
+  const send = (jwt) => fetch(SHARD_API_BASE_URL + path, {
     method,
     headers: {
       "Content-Type": "application/json",
-      Authorization: "Bearer " + token,
+      Authorization: "Bearer " + jwt,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+
+  let response = await send(token);
+  if (response.status === 401) {
+    // Jeton expiré ou remplacé (nouvelle connexion sur le site) : le site en fournit un nouveau, on réessaie une fois
+    const fresh = await shardApiToken({ refresh: true });
+    if (fresh && fresh !== token) response = await send(fresh);
+  }
+
   const json = await response.json().catch(() => null);
   if (!response.ok) {
-    if (response.status === 401) sessionStorage.removeItem("token");
+    if (response.status === 401) {
+      sessionStorage.removeItem("token");
+      shardApiTokenPromise = null;
+      throw new Error("Session expirée : reconnectez-vous sur le site Tetrago, puis réessayez.");
+    }
     const detail = json && json.detail;
     throw new Error(
       typeof detail === "string" ? detail : response.status + " " + response.statusText
@@ -72,43 +84,89 @@ async function shardApiRequest(method, path, body) {
 // Jeton d'authentification de l'éditeur.
 // ShardUI-2 et ShardUI-2-Maps sont servis sur des origines différentes : le
 // localStorage n'est donc pas partagé. Quand l'éditeur est ouvert depuis
-// ShardUI-2 (window.open), il demande le jeton à la page d'origine par
-// postMessage, en n'acceptant que les réponses venant de UI_BASE_URL. Le jeton
-// est ensuite conservé dans le sessionStorage de l'onglet (survit aux
-// rechargements après sauvegarde).
+// ShardUI-2 (window.open), il demande le jeton à la page d'origine par postMessage :
+//  - la demande ne contient rien de secret : elle part vers toute origine et est
+//    répétée chaque seconde (15 s au plus), pour un onglet du site lent, rechargé
+//    entre-temps ou servi sur une autre adresse (localhost / 127.0.0.1) ;
+//  - la réponse n'est acceptée que de la fenêtre d'origine et d'une origine
+//    autorisée (UI_BASE_URL, UI_ALLOWED_ORIGINS) ; sinon la raison est affichée ;
+//  - le jeton est gardé dans le sessionStorage de l'onglet (survit aux rechargements),
+//    un échec n'est pas mémorisé, et un jeton refusé par l'API (401) est redemandé.
+const SHARD_API_TOKEN_RETRY_MS = 1000;
+const SHARD_API_TOKEN_TIMEOUT_MS = 15000;
 let shardApiTokenPromise = null;
+let shardApiAuthErrorMessage = null;
 
-function shardApiToken() {
-  shardApiTokenPromise ??= shardApiRequestToken();
+// refresh : oublier le jeton gardé et en redemander un au site
+function shardApiToken({ refresh = false } = {}) {
+  if (refresh) {
+    sessionStorage.removeItem("token");
+    shardApiTokenPromise = null;
+  }
+  shardApiTokenPromise ??= shardApiRequestToken().then((token) => {
+    if (!token) shardApiTokenPromise = null;
+    return token;
+  });
   return shardApiTokenPromise;
 }
 
-function shardApiRequestToken() {
-  const stored = sessionStorage.getItem("token") || localStorage.getItem("token");
-  if (stored) return Promise.resolve(stored);
-  const uiOrigins = shardApiAllowedUiOrigins();
-  if (!window.opener || uiOrigins.length === 0) return Promise.resolve(null);
+// Raison lisible du dernier échec de connexion de l'éditeur, ou null
+function shardApiAuthError() {
+  return shardApiAuthErrorMessage;
+}
 
+function shardApiRequestToken() {
+  const stored = sessionStorage.getItem("token");
+  if (stored) return Promise.resolve(stored);
+
+  if (!window.opener || window.opener.closed) {
+    // Carte servie sur la même origine que le site : même localStorage
+    const local = localStorage.getItem("token");
+    shardApiAuthErrorMessage = local ? null : "ouvrez l'éditeur depuis le site Tetrago pour vous connecter";
+    return Promise.resolve(local);
+  }
+
+  const uiOrigins = shardApiAllowedUiOrigins();
   return new Promise((resolve) => {
-    const finish = (token) => {
+    let finished = false;
+    const finish = (token, error) => {
+      if (finished) return;
+      finished = true;
+      clearInterval(retry);
       clearTimeout(timeout);
       window.removeEventListener("message", onMessage);
-      resolve(token);
+      shardApiAuthErrorMessage = token ? null : error;
+      if (token) sessionStorage.setItem("token", token);
+      resolve(token || null);
     };
     const onMessage = (event) => {
-      if (!uiOrigins.includes(event.origin) || event.source !== window.opener) return;
-      if (event.data?.source !== "shardui" || event.data?.type !== "editor-auth") return;
-      if (event.data.token) sessionStorage.setItem("token", event.data.token);
-      finish(event.data.token || null);
+      if (event.source !== window.opener || event.data?.source !== "shardui") return;
+      if (!uiOrigins.includes(event.origin)) {
+        console.warn("Éditeur : réponse ignorée de l'origine non autorisée " + event.origin);
+        finish(null, `le site ${event.origin} n'est pas autorisé à connecter l'éditeur : ajoutez-le à UI_ALLOWED_ORIGINS dans le .env de la carte`);
+        return;
+      }
+      if (event.data.type === "editor-auth-refused") {
+        finish(null, event.data.reason || "le site a refusé de connecter l'éditeur");
+      } else if (event.data.type === "editor-auth") {
+        finish(event.data.token, "vous n'êtes pas connecté sur le site Tetrago : connectez-vous, puis réessayez");
+      }
     };
-    const timeout = setTimeout(() => finish(null), 5000);
+    const ask = () => {
+      if (!window.opener || window.opener.closed) {
+        finish(null, "l'onglet du site qui a ouvert l'éditeur a été fermé : rouvrez l'éditeur depuis le site");
+        return;
+      }
+      window.opener.postMessage({ source: "minedmap", type: "editor-auth-request" }, "*");
+    };
 
     window.addEventListener("message", onMessage);
-    // L'origine de l'opener n'est pas lisible : on envoie la demande à chaque
-    // origine autorisée, le navigateur ne la délivre qu'à celle qui correspond.
-    for (const uiOrigin of uiOrigins) {
-      window.opener.postMessage({ source: "minedmap", type: "editor-auth-request" }, uiOrigin);
-    }
+    const retry = setInterval(ask, SHARD_API_TOKEN_RETRY_MS);
+    const timeout = setTimeout(
+      () => finish(null, "le site Tetrago ne répond pas : gardez son onglet ouvert, puis réessayez"),
+      SHARD_API_TOKEN_TIMEOUT_MS,
+    );
+    ask();
   });
 }
 
