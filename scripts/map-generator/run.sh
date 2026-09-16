@@ -6,6 +6,7 @@
 # - journalise dans ../../logs/map-generator/
 #
 # Usage : ./run.sh [--update-tools] [options de generate_maps.py]
+#         ./run.sh --stats-only          relève les statistiques du monde sans regénérer les cartes
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

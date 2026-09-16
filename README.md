@@ -67,6 +67,7 @@ Voir [NGINX-SETUP.md](NGINX-SETUP.md) pour le détail des règles de configurati
 1. **Récupération** : l'API Minestrator ne permet pas de télécharger les sauvegardes ; le monde est donc copié par SFTP (`level.dat` et dossiers `region` uniquement, seuls les fichiers modifiés sont téléchargés). Pendant la copie, `save-off` / `save-all flush` puis `save-on` sont envoyés via l'API.
 2. **Génération** : incrémentale dans `scripts/map-generator/work/output` (seules les régions modifiées sont redessinées).
 3. **Publication** : chaque carte réussie est copiée dans `assets/data/<nom>` et `maps.json` est mis à jour. Une carte en erreur garde ses anciennes tuiles.
+4. **Statistiques** : la sauvegarde est relue (`world_stats.py`) et le relevé est envoyé à Shard-API, où les administrateurs le consultent sur `/admin/monde`.
 
 Les cartes générées sont définies dans [maps.config.json](scripts/map-generator/maps.config.json) (`tetrago`, `nether`, `nether_toit`, `end` désactivé, dimensions personnalisées en option).
 
@@ -79,6 +80,43 @@ npm run maps:cron:remove     # retirer la tâche cron
 ```
 
 Options : `run.sh --update-tools` (met à jour paramiko et MinedMap), `--only tetrago`, `--no-publish`. Journaux dans `logs/map-generator/` (12 semaines conservées).
+
+Trois sources de monde possibles :
+
+| Source | Commande |
+| --- | --- |
+| Serveur Minestrator (SFTP) | `npm run maps:generate` |
+| Sauvegarde sur la machine | `npm run maps:generate:world -- /chemin/de/la/sauvegarde` |
+| Copie déjà téléchargée (`work/world`) | `npm run maps:generate:local` |
+
+`--local-world` (ou `MAP_LOCAL_WORLD` dans `.env`) accepte le dossier du monde (celui qui contient `level.dat`) ou celui du serveur (le monde est alors trouvé par `level-name` de `server.properties`). Les fichiers sont repris par lien matériel quand c'est possible, donc sans occuper d'espace disque supplémentaire, et la sauvegarde n'est jamais modifiée. Sur un serveur en cours d'exécution, préférer une sauvegarde arrêtée : les régions peuvent être incomplètes.
+
+## Statistiques du monde
+
+[world_stats.py](scripts/map-generator/world_stats.py) lit la sauvegarde après la génération des cartes (le serveur est en Fabric, sans greffon : tout vient des fichiers) et envoie un relevé à Shard-API, consultable par les administrateurs sur `/admin/monde`.
+
+| Mesure | Source dans la sauvegarde |
+| --- | --- |
+| Présence des joueurs | `InhabitedTime` de chaque chunk (`region/*.mca`) |
+| Population d'une ville | lits posés dans les chunks fréquentés, à l'intérieur de ses frontières |
+| Villageois et entités | `entities/*.mca` |
+| Joueurs | `playerdata/*.dat` (position, lit, niveau) et `stats/*.json` (temps de jeu, morts, distance) |
+| Pseudos | `usercache.json` du serveur, sinon le compte Minecraft lié sur le site, sinon playerdb.co (côté API) |
+
+La population ne compte que les lits des chunks où les joueurs ont réellement passé du temps (`MAP_STATS_BED_HOURS`, 10 h par défaut) : sans ce tri, les villages générés par le jeu écrasent les villes des joueurs. **À chaque relevé, la population des villes et des quartiers du site est remplacée par cette mesure** (une valeur saisie à la main ne survit donc pas au relevé suivant) ; les villes d'une dimension absente de la sauvegarde ne sont pas touchées, et la valeur précédente reste consultable dans le relevé. Une ville sans frontières tracées sur la carte est mesurée dans un rayon autour de son point, ce que la page d'administration signale : **tracer les frontières est ce qui rend la mesure fiable**.
+
+```bash
+npm run maps:stats                               # relever sans regénérer les cartes (monde repris par SFTP)
+npm run maps:stats:world -- /chemin/du/monde     # relever une sauvegarde présente sur la machine
+npm run maps:stats:local                         # relever la copie déjà téléchargée (work/world)
+npm run maps:generate -- --no-stats              # générer les cartes sans relever
+npm run maps:stats -- --stats-no-send            # relever sans envoyer à l'API (vérification)
+python3 scripts/map-generator/world_stats.py --world "/chemin/du/monde" --json releve.json --no-send
+```
+
+Le relevé accepte les mêmes sources de monde que la génération (`--local-world`, ou `MAP_LOCAL_WORLD` dans `.env`, s'appliquent aussi à `npm run maps:stats`). Avec `--local-world`, la sauvegarde est lue sur place : rien n'est recopié dans `work/world`. Une sauvegarde incomplète est signalée dans le journal — `entities` manquant donne 0 villageois, `playerdata` manquant donne 0 joueur —, ce qui arrive avec `maps:stats:local` si le dernier téléchargement datait d'avant les statistiques.
+
+L'envoi demande `MAP_STATS_API_KEY`, qui doit valoir `platforms.monde.key` dans la configuration de Shard-API. Les seuils (`MAP_STATS_*`) sont décrits dans `.env.example`. Le relevé du monde entier prend un peu plus d'une minute pour 2,6 Go de régions.
 
 ## Structure du projet
 

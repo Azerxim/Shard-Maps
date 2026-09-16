@@ -4,9 +4,12 @@
 Adapté de MinedMap Viewer Generator (https://github.com/Azerxim/MinedMap-Viewer-Generator) :
 - le monde est récupéré par SFTP (l'API Minestrator ne permet pas de télécharger les sauvegardes),
   en ne copiant que level.dat et les dossiers region, et uniquement les fichiers modifiés ;
+- ou repris d'une sauvegarde déjà sur la machine avec --local-world (MAP_LOCAL_WORLD) ;
 - les cartes sont générées de façon incrémentale dans work/output puis publiées dans assets/data ;
 - maps.json est mis à jour sans écraser les entrées existantes ;
-- une carte en erreur garde ses anciennes tuiles, les autres sont quand même publiées.
+- une carte en erreur garde ses anciennes tuiles, les autres sont quand même publiées ;
+- les statistiques du monde (présence, population, joueurs) sont relevées puis envoyées à Shard-API
+  (world_stats.py, désactivable avec --no-stats).
 
 Lancer via run.sh (environnement virtuel, verrou, logs).
 """
@@ -22,7 +25,14 @@ import sys
 import time
 import urllib.request
 
-import paramiko
+# Le relevé du monde vit à côté de ce fichier : importable même si le script est chargé par son chemin
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import world_stats
+
+try:
+    import paramiko
+except ImportError:  # seul le SFTP en a besoin : --local-world fonctionne sans
+    paramiko = None
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MAPS_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
@@ -32,6 +42,10 @@ WORLD_DIR = os.path.join(WORK_DIR, "world")
 OUTPUT_DIR = os.path.join(WORK_DIR, "output")
 DATA_DIR = os.path.join(MAPS_DIR, "assets", "data")
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "maps.config.json")
+
+# Dossiers lus par world_stats.py, en plus de region : entités par dimension, joueurs à la racine du monde
+STATS_DIMENSION_DIRS = ("entities",)
+STATS_WORLD_DIRS = ("playerdata", "stats")
 
 MINESTRATOR_API = "https://mine.sttr.io"
 MMVG_DIR = os.path.join(CACHE_DIR, "MinedMap-Viewer-Generator", "MinedMap")
@@ -117,6 +131,8 @@ def sftp_credentials(server_id):
 # SFTP
 
 def connect_sftp(creds):
+    if paramiko is None:
+        raise RuntimeError("paramiko n'est pas installé : lancer via run.sh, ou utiliser --local-world")
     os.makedirs(CACHE_DIR, exist_ok=True)
     known_hosts = os.path.join(CACHE_DIR, "known_hosts")
     client = paramiko.SSHClient()
@@ -201,7 +217,7 @@ def discover_custom_dimensions(sftp, remote_world):
     return found
 
 
-def download_world(sources):
+def download_world(sources, avec_stats=False):
     server_id = os.environ.get("MINESTRATOR_SERVER_ID")
     creds = sftp_credentials(server_id)
     use_save_commands = server_id and env_flag("MAP_SAVE_COMMANDS", True)
@@ -225,14 +241,26 @@ def download_world(sources):
             os.makedirs(WORLD_DIR, exist_ok=True)
             sync_file(sftp, posixpath.join(remote_world, "level.dat"), os.path.join(WORLD_DIR, "level.dat"),
                       sftp.stat(posixpath.join(remote_world, "level.dat")), stats)
+            dossiers = ("region",) + (STATS_DIMENSION_DIRS if avec_stats else ())
             for source in sources:
-                remote_region = posixpath.join(remote_world, source, "region") if source else posixpath.join(remote_world, "region")
-                local_region = os.path.join(WORLD_DIR, source, "region")
-                if remote_exists(sftp, remote_region):
-                    log("SFTP", f"Synchronisation de {source or '.'}/region")
-                    mirror_dir(sftp, remote_region, local_region, stats)
-                else:
-                    log("WARN", f"{source or '.'}/region absent sur le serveur")
+                for dossier in dossiers:
+                    remote_dir = posixpath.join(remote_world, source, dossier) if source else posixpath.join(remote_world, dossier)
+                    local_dir = os.path.join(WORLD_DIR, source, dossier)
+                    if remote_exists(sftp, remote_dir):
+                        log("SFTP", f"Synchronisation de {source or '.'}/{dossier}")
+                        mirror_dir(sftp, remote_dir, local_dir, stats)
+                    elif dossier == "region":
+                        log("WARN", f"{source or '.'}/region absent sur le serveur")
+            if avec_stats:
+                # Joueurs (positions, lits, temps de jeu) et pseudos, pour les statistiques
+                for dossier in STATS_WORLD_DIRS:
+                    remote_dir = posixpath.join(remote_world, dossier)
+                    if remote_exists(sftp, remote_dir):
+                        log("SFTP", f"Synchronisation de {dossier}")
+                        mirror_dir(sftp, remote_dir, os.path.join(WORLD_DIR, dossier), stats)
+                usercache = posixpath.join(root, "usercache.json")
+                if remote_exists(sftp, usercache):
+                    sync_file(sftp, usercache, os.path.join(WORK_DIR, "usercache.json"), sftp.stat(usercache), stats)
         finally:
             if use_save_commands:
                 send_command(server_id, "save-on")
@@ -242,6 +270,99 @@ def download_world(sources):
 
     log("SFTP", f"{stats['downloaded']} fichier(s) téléchargé(s) ({stats['bytes'] / 1048576:.1f} Mo), "
                 f"{stats['skipped']} inchangé(s), {stats['deleted']} supprimé(s)")
+
+
+# ---------------------------------------------------------------------------
+# Sauvegarde locale (--local-world)
+
+def local_world_root(path):
+    """Dossier du monde (contenant level.dat), accepté aussi sous forme de dossier de serveur (world/…)."""
+    root = os.path.abspath(os.path.expanduser(path))
+    if not os.path.isdir(root):
+        raise RuntimeError(f"Sauvegarde locale introuvable : {root}")
+    if os.path.exists(os.path.join(root, "level.dat")):
+        return root
+
+    candidates = [os.environ.get("MAP_WORLD_NAME")]
+    properties = os.path.join(root, "server.properties")
+    if os.path.exists(properties):
+        with open(properties, encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                if line.startswith("level-name="):
+                    candidates.append(line.split("=", 1)[1].strip())
+    candidates.append("world")
+    for candidate in candidates:
+        if candidate and os.path.exists(os.path.join(root, candidate, "level.dat")):
+            return os.path.join(root, candidate)
+    raise RuntimeError(f"level.dat introuvable dans {root}, ni dans un sous-dossier de monde")
+
+
+def link_or_copy(source, target, stats):
+    """Lien matériel quand c'est possible (aucune copie sur le disque), sinon copie en gardant la date."""
+    info = os.stat(source)
+    if os.path.exists(target):
+        existing = os.stat(target)
+        if existing.st_size == info.st_size and int(existing.st_mtime) == int(info.st_mtime):
+            stats["skipped"] += 1
+            return
+        os.remove(target)
+    try:
+        os.link(source, target)
+    except OSError:
+        # Systèmes de fichiers différents (disque externe, montage réseau…)
+        shutil.copy2(source, target)
+    stats["copied"] += 1
+    stats["bytes"] += info.st_size
+
+
+def mirror_local_dir(source, target, stats):
+    """Copie un dossier local, en supprimant dans la copie ce qui n'existe plus dans la sauvegarde."""
+    os.makedirs(target, exist_ok=True)
+    seen = set()
+    for name in os.listdir(source):
+        seen.add(name)
+        source_path, target_path = os.path.join(source, name), os.path.join(target, name)
+        if os.path.isdir(source_path):
+            mirror_local_dir(source_path, target_path, stats)
+        else:
+            link_or_copy(source_path, target_path, stats)
+    for name in os.listdir(target):
+        if name not in seen:
+            path = os.path.join(target, name)
+            shutil.rmtree(path) if os.path.isdir(path) else os.remove(path)
+            stats["deleted"] += 1
+
+
+def copy_local_world(root, sources):
+    """Prépare work/world depuis une sauvegarde locale : même résultat que le SFTP, sans réseau.
+
+    La sauvegarde n'est jamais modifiée (MinedMap lit work/world, où level.dat est recopié au besoin).
+    Sur un serveur en cours d'exécution, préférer une sauvegarde arrêtée : les régions peuvent être incomplètes.
+    """
+    stats = {"copied": 0, "skipped": 0, "deleted": 0, "bytes": 0}
+    os.makedirs(WORLD_DIR, exist_ok=True)
+    log("LOCAL", f"Monde : {root}")
+    link_or_copy(os.path.join(root, "level.dat"), os.path.join(WORLD_DIR, "level.dat"), stats)
+    for source in sources:
+        region = os.path.join(root, source, "region")
+        if os.path.isdir(region):
+            log("LOCAL", f"Reprise de {source or '.'}/region")
+            mirror_local_dir(region, os.path.join(WORLD_DIR, source, "region"), stats)
+        else:
+            log("WARN", f"{source or '.'}/region absent de la sauvegarde")
+    log("LOCAL", f"{stats['copied']} fichier(s) repris ({stats['bytes'] / 1048576:.1f} Mo), "
+                 f"{stats['skipped']} inchangé(s), {stats['deleted']} supprimé(s)")
+
+
+def discover_local_dimensions(root):
+    """dimensions/<namespace>/<nom>/region -> ["namespace/nom", ...], dans un monde présent sur la machine"""
+    base = os.path.join(root, "dimensions")
+    if not os.path.isdir(base):
+        return []
+    return [f"dimensions/{namespace}/{name}"
+            for namespace in sorted(os.listdir(base)) if os.path.isdir(os.path.join(base, namespace))
+            for name in sorted(os.listdir(os.path.join(base, namespace)))
+            if os.path.isdir(os.path.join(base, namespace, name, "region"))]
 
 
 # ---------------------------------------------------------------------------
@@ -324,33 +445,51 @@ def update_maps_json(generated):
 
 
 # ---------------------------------------------------------------------------
+# Statistiques du monde
+
+def collect_stats(world_root, maps, server_root=None, envoi=True):
+    """Relevé des statistiques du monde, envoyé à Shard-API (world_stats.py)."""
+    api_url = os.environ.get("SHARD_API_BASE_URL", "").strip()
+    cle = os.environ.get("MAP_STATS_API_KEY", "").strip()
+    sources = sorted({m.get("source", "") for m in maps})
+    log("STATS", f"Relevé du monde : {', '.join(source or 'overworld' for source in sources)}")
+    world_stats.relever(world_root, sources, maps, api_url, cle, racine_serveur=server_root, envoi=envoi)
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--skip-download", action="store_true", help="regénérer à partir de la copie locale du monde")
+    parser.add_argument("--skip-download", action="store_true", help="regénérer à partir de la copie déjà présente dans work/world")
+    parser.add_argument("--local-world", metavar="CHEMIN", default=os.environ.get("MAP_LOCAL_WORLD") or None,
+                        help="utiliser une sauvegarde présente sur la machine (dossier du monde ou du serveur) au lieu du SFTP")
     parser.add_argument("--no-publish", action="store_true", help="générer sans copier dans assets/data")
+    parser.add_argument("--no-stats", action="store_true", help="ne pas relever les statistiques du monde")
+    parser.add_argument("--stats-only", action="store_true", help="relever les statistiques sans générer de carte")
+    parser.add_argument("--stats-no-send", action="store_true", help="relever les statistiques sans les envoyer à l'API")
     parser.add_argument("--only", action="append", metavar="NOM", help="ne traiter que cette carte (répétable)")
     args = parser.parse_args()
 
     with open(CONFIG_PATH, encoding="utf-8") as f:
         config = json.load(f)
 
+    local_root = local_world_root(args.local_world) if args.local_world else None
+
     custom_dimensions = []
-    if config.get("custom_dimensions") and not args.skip_download:
-        creds = sftp_credentials(os.environ.get("MINESTRATOR_SERVER_ID"))
-        client, sftp = connect_sftp(creds)
-        try:
-            root = os.environ.get("MINESTRATOR_SFTP_ROOT", ".")
-            custom_dimensions = discover_custom_dimensions(sftp, posixpath.join(root, world_name(sftp, root)))
-        finally:
-            sftp.close()
-            client.close()
-    elif config.get("custom_dimensions"):
-        base = os.path.join(WORLD_DIR, "dimensions")
-        if os.path.isdir(base):
-            custom_dimensions = [f"dimensions/{ns}/{name}" for ns in sorted(os.listdir(base))
-                                 for name in sorted(os.listdir(os.path.join(base, ns)))
-                                 if os.path.isdir(os.path.join(base, ns, name, "region"))]
+    if config.get("custom_dimensions"):
+        if args.skip_download:
+            custom_dimensions = discover_local_dimensions(WORLD_DIR)
+        elif local_root:
+            custom_dimensions = discover_local_dimensions(local_root)
+        else:
+            creds = sftp_credentials(os.environ.get("MINESTRATOR_SERVER_ID"))
+            client, sftp = connect_sftp(creds)
+            try:
+                root = os.environ.get("MINESTRATOR_SFTP_ROOT", ".")
+                custom_dimensions = discover_custom_dimensions(sftp, posixpath.join(root, world_name(sftp, root)))
+            finally:
+                sftp.close()
+                client.close()
 
     maps = build_map_list(config, custom_dimensions)
     if args.only:
@@ -359,8 +498,28 @@ def main():
         log("ERROR", "Aucune carte à générer")
         return 1
 
-    if not args.skip_download:
-        download_world(sorted({m.get("source", "") for m in maps}))
+    avec_stats = env_flag("MAP_STATS", True) and not args.no_stats
+    sources = sorted({m.get("source", "") for m in maps})
+    if args.skip_download:
+        log("WORLD", "Copie déjà présente dans work/world réutilisée")
+    elif local_root and args.stats_only:
+        # Le relevé lit la sauvegarde directement : rien à recopier
+        log("LOCAL", f"Monde : {local_root}")
+    elif local_root:
+        copy_local_world(local_root, sources)
+    else:
+        download_world(sources, avec_stats=avec_stats)
+
+    # La sauvegarde locale est lue telle quelle : seules les régions sont recopiées pour MinedMap
+    stats_root = local_root or WORLD_DIR
+    stats_server_root = os.path.dirname(local_root.rstrip(os.sep)) if local_root else WORK_DIR
+
+    if args.stats_only:
+        if not avec_stats:
+            log("ERROR", "--stats-only et --no-stats sont incompatibles")
+            return 1
+        collect_stats(stats_root, maps, stats_server_root, envoi=not args.stats_no_send)
+        return 0
 
     generated, failed = [], []
     for entry in maps:
@@ -375,6 +534,12 @@ def main():
 
     if generated and not args.no_publish:
         update_maps_json(generated)
+
+    if avec_stats:
+        try:
+            collect_stats(stats_root, maps, stats_server_root, envoi=not args.stats_no_send)
+        except Exception as error:  # les cartes sont déjà publiées : le relevé ne doit pas faire échouer la génération
+            log("ERROR", f"Statistiques du monde : {error}")
 
     log("DONE", f"{len(generated)} carte(s) générée(s)" + (f", en erreur : {', '.join(failed)}" if failed else ""))
     return 1 if failed else 0
