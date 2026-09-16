@@ -153,10 +153,43 @@ function buildCartographieForm(layer, entry) {
     addField("Description", description, "description");
   }
 
+  // Couleur : sélecteur et code hexadécimal, synchronisés
+  const colorField = document.createElement("div");
+  colorField.className = "flex flex-col gap-1";
+  const colorLabel = document.createElement("span");
+  colorLabel.textContent = "Couleur";
+  const colorRow = document.createElement("div");
+  colorRow.className = "flex flex-row items-center gap-2";
   const color = document.createElement("input");
   color.type = "color";
-  color.className = "w-full h-8 cursor-pointer";
-  addField("Couleur", color, "color", () => applyCartographieColor(layer, entry));
+  color.className = "h-8 w-12 shrink-0 cursor-pointer";
+  color.value = entry.color ?? "";
+  const hex = document.createElement("input");
+  hex.type = "text";
+  hex.className = "input input-sm font-mono";
+  hex.maxLength = 7;
+  hex.value = entry.color ?? "";
+  const setColor = (value) => {
+    entry.color = value;
+    entry.dirty = true;
+    applyCartographieColor(layer, entry);
+  };
+  color.addEventListener("input", () => {
+    hex.value = color.value;
+    hex.classList.remove("input-error");
+    setColor(color.value);
+  });
+  hex.addEventListener("input", () => {
+    const value = hex.value.trim().replace(/^#?/, "#").toLowerCase();
+    const valid = /^#[0-9a-f]{6}$/.test(value);
+    hex.classList.toggle("input-error", !valid);
+    if (!valid) return;
+    color.value = value;
+    setColor(value);
+  });
+  colorRow.append(color, hex);
+  colorField.append(colorLabel, colorRow);
+  form.appendChild(colorField);
 
   // Suppression locale, appliquée à l'API au clic sur "Save" (comme la gomme de geoman)
   const labels = { Marker: "le marqueur", Text: "le texte" };
@@ -220,11 +253,12 @@ function renderCartographieContext(map, json, excludedIds) {
   for (const subdata of json.polygons) {
     if (excludedIds.has(subdata.dbid)) continue;
     const coords = JSON.parse(subdata.coords);
-    const layer =
-      subdata.type === "Text"
-        ? CartographieTextMarker(coords, subdata.text, subdata.color, { pmIgnore: true })
-        : L.polygon(coords, { color: subdata.color, pmIgnore: true });
-    layer.addTo(map).bindPopup(subdata.popup, { className: "customPopup" });
+    const isText = subdata.type === "Text";
+    const layer = isText
+      ? CartographieTextMarker(coords, subdata.text, subdata.color, { pmIgnore: true })
+      : L.polygon(coords, { color: subdata.color, pmIgnore: true });
+    const popup = isText ? subdata.popup : withZoneColor(subdata.popup, subdata.color);
+    layer.addTo(map).bindPopup(popup, { className: "customPopup" });
   }
 
   for (const subdata of json.markers) {
@@ -234,6 +268,18 @@ function renderCartographieContext(map, json, excludedIds) {
       .bindTooltip(subdata.tooltip, { className: "bg-base-100" })
       .bindPopup(subdata.popup, { className: "customPopup" });
   }
+}
+
+// Pendant le dessin, les couches existantes laissent passer les clics : sinon
+// l'ouverture de leur popup stoppe le clic et geoman ne pose pas le point.
+function setCartographieLayersInteractive(map, interactive) {
+  if (!interactive) map.closePopup();
+  map.eachLayer((layer) => {
+    if (layer._pmTempLayer || layer instanceof L.DivOverlay) return;
+    if (!interactive) layer.closeTooltip?.();
+    const element = layer.getElement?.();
+    if (element) element.style.pointerEvents = interactive ? "" : "none";
+  });
 }
 
 function initCartographieEditor(map, pathname) {
@@ -316,7 +362,16 @@ async function setupCartographieEditor(map, pathname) {
   });
   highlightLayerControlEditor();
 
+  map.on("pm:globaldrawmodetoggled", (e) => {
+    setCartographieLayersInteractive(map, !e.enabled);
+  });
+
   map.on("pm:create", (e) => {
+    // Dessin en continu : la nouvelle couche ne doit pas non plus bloquer les clics
+    if (map.pm.globalDrawModeEnabled()) {
+      const element = e.layer.getElement?.();
+      if (element) element.style.pointerEvents = "none";
+    }
     // Mode opt-in (voir editor.minedmap.js) : rendre la nouvelle couche éditable
     e.layer.options.pmIgnore = false;
     L.PM.reInitLayer(e.layer);

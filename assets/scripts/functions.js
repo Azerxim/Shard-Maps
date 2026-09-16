@@ -62,6 +62,21 @@ const escapeHtml = function (value) {
     .replace(/'/g, "&#39;");
 };
 
+// Ajoute le code couleur de la zone en tête de sa popup
+const withZoneColor = function (popup, color) {
+  if (!color) return popup;
+  const safeColor = escapeHtml(color);
+  return `
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-row items-center gap-2">
+        <span>Couleur:</span>
+        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(127, 127, 127, 0.6); background-color: ${safeColor};"></span>
+        <code style="user-select: all;">${safeColor}</code>
+      </div>
+      ${popup ?? ""}
+    </div>`;
+};
+
 function logEvent(e) {
   console.log(e);
 }

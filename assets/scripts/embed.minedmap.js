@@ -474,7 +474,7 @@ window.createMap = function () {
               radius: JSON.parse(subdata.coords)[1],
             })
               .addTo(map)
-              .bindPopup(subdata.popup, { className: "customPopup" });
+              .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
             break;
 
           case "Rectangle":
@@ -482,7 +482,7 @@ window.createMap = function () {
           case "Line":
             L.polygon(JSON.parse(subdata.coords), { color: subdata.color })
               .addTo(map)
-              .bindPopup(subdata.popup, { className: "customPopup" });
+              .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
             break;
 
           case "Markers":
