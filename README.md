@@ -1,5 +1,7 @@
 # ShardUI-2-Maps
 
+> Documentation complète : [DOCUMENTATION.md](DOCUMENTATION.md).
+
 Application de cartographie interactive du serveur **Tetrago**, basée sur [MinedMap](https://github.com/nightkynight/MinedMap) et [Leaflet](https://leafletjs.com/). Permet de consulter les cartes du monde (surface, Nether, etc.), d'afficher des marqueurs (civilisations, commerces, alliances, religions) et d'éditer ces données via un éditeur intégré.
 
 Application statique (HTML/CSS/JS vanilla), sans étape de build, servie via nginx.
@@ -9,22 +11,24 @@ Application statique (HTML/CSS/JS vanilla), sans étape de build, servie via ngi
 - **Visualiseur de carte** ([index.html](index.html)) : navigation sur les cartes générées par MinedMap, sélection de la carte (Tetrago, Nether surface, Nether toit…) et du thème (clair/sombre).
 - **Éditeur** ([editor.html](editor.html)) : édition des marqueurs sur la carte (civilisations, commerces, alliances, religions).
 - **Embed** ([embed.html](embed.html) / [embedfull.html](embedfull.html)) : versions intégrables (iframe) de la carte, pour affichage externe.
+- **Choix d'une position** ([locate.html](locate.html)) : vue intégrée par les formulaires de ShardUI-2, qui renvoie les coordonnées cliquées au site par `postMessage`.
 - **À propos** ([about.html](about.html)) : page d'information.
-- **API PHP** ([assets/api](assets/api)) : endpoints `get`/`put` pour la lecture et l'écriture des données de carte (civilisations, marqueurs…), servis via PHP-FPM.
+
+Les données (civilisations, commerces, alliances, religions, guerres) viennent de [Shard-API](../Shard-API), interrogée directement par [assets/scripts/core/shard-api.js](assets/scripts/core/shard-api.js). Il n'y a plus d'API PHP dans ce dépôt.
 
 ## Stack technique
 
 - HTML / CSS / JavaScript vanilla
-- [Leaflet](https://leafletjs.com/) + plugins (`leaflet-geoman`, `leaflet.awesome-markers`, `leaflet.icon-material`)
-- [MinedMap](assets/scripts/minedmap.js) pour l'affichage des cartes générées à partir du monde Minecraft
-- [Tailwind CSS](https://tailwindcss.com/) (CDN) + [DaisyUI](https://daisyui.com/) pour l'UI
+- [Leaflet](https://leafletjs.com/) + plugins (`leaflet-geoman` pour le dessin, `leaflet.awesome-markers` et `leaflet.icon-material` pour les marqueurs)
+- [MinedMap](assets/scripts/pages/map.js) pour l'affichage des cartes générées à partir du monde Minecraft
+- [Tailwind CSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/), SweetAlert et la police Material Icons, **copiés dans [assets/vendor](assets/vendor)** : aucune dépendance n'est chargée depuis un CDN tiers au moment de l'affichage
 - [Font Awesome](https://fontawesome.com/) pour les icônes
-- nginx + PHP-FPM pour le serveur et l'API
+- nginx pour servir le site
 
 ## Prérequis
 
 - nginx
-- PHP-FPM (pour les endpoints de l'API `assets/api`)
+- `lsof` (le script local s'en sert pour vérifier que le port est libre)
 - `pm2` (optionnel, pour le suivi du processus en développement local)
 
 ## Installation & lancement
@@ -32,21 +36,29 @@ Application statique (HTML/CSS/JS vanilla), sans étape de build, servie via ngi
 ### Développement local (sans sudo)
 
 ```bash
-npm run init          # rend les scripts exécutables
-npm run dev            # équivalent à: ./start-nginx-local.sh
-# ou en précisant un port :
-./start-nginx-local.sh 8080
+npm run init     # rend les scripts exécutables
+npm run dev      # MAPS_ENV=development ./deploy/start-nginx-local.sh
+npm run start    # même chose sans le mode développement
 ```
 
-Accès : `http://localhost:8080` (port par défaut ou celui indiqué).
+Accès : `http://localhost:3005`. Pour un autre port, passer `PORT` en variable d'environnement :
+
+```bash
+PORT=3006 npm run dev
+```
+
+Si le port est occupé, le script arrête une instance qu'il a lui-même lancée, mais **refuse de toucher à un
+processus tiers** : il affiche qui occupe le port et s'arrête.
 
 ### Installation système (production)
 
 ```bash
-npm run install:nginx   # sudo bash install-nginx.sh
+npm run install:nginx   # sudo bash deploy/install-nginx.sh
 ```
 
-Installe et configure nginx + PHP-FPM, active et démarre le service.
+Installe nginx si besoin, écrit la configuration à partir de [deploy/nginx.conf](deploy/nginx.conf), l'active et
+démarre le service. Ce script **ne génère pas** `assets/scripts/core/env.js` : le créer une fois à la main d'après
+[.env.example](.env.example).
 
 ### Gestion via pm2 (optionnel)
 
@@ -58,7 +70,7 @@ npm run pm2:logs      # affiche les logs
 npm run pm2:delete    # supprime le process pm2
 ```
 
-Voir [NGINX-SETUP.md](NGINX-SETUP.md) pour le détail des règles de configuration nginx (routes de cartes, embed, éditeur, API) et le dépannage.
+Voir [deploy/NGINX-SETUP.md](deploy/NGINX-SETUP.md) pour le détail des règles de configuration nginx (routes de cartes, embed, locate, éditeur) et le dépannage.
 
 ## Génération hebdomadaire des cartes
 
@@ -121,51 +133,60 @@ L'envoi demande `MAP_STATS_API_KEY`, qui doit valoir `platforms.monde.key` dans 
 ## Structure du projet
 
 ```
-assets/
-├── api/            # Endpoints PHP (get/put) pour lire/écrire les données de carte
-├── css/            # Styles (minedmap.css, themes.css)
-├── data/            # Données de carte réelles (maps.json, tuiles générées…) — non versionnées
-├── data_exemple/    # Jeux de données d'exemple par monde (tetrago, nether, nether_toit, skyslands, aegol, endrya)
-├── fontawesome/     # Librairie d'icônes
-├── images/          # Logos, fonds, icônes
-├── leaflet/         # Librairie Leaflet + plugins
-└── scripts/         # Scripts JS applicatifs :
-    ├── minedmap.js               # Rendu de la carte MinedMap
-    ├── functions.js               # Fonctions utilitaires
-    ├── menu.js                    # Menu de sélection de carte / options
-    ├── markers.js                 # Gestion générique des marqueurs
-    ├── markers.civilisations.js   # Marqueurs de civilisations
-    ├── markers.commerces.js       # Marqueurs de commerces
-    ├── markers.alliances.js       # Marqueurs d'alliances
-    ├── markers.religions.js       # Marqueurs de religions
-    ├── editor.minedmap.js         # Logique de l'éditeur
-    └── editor.save.js             # Sauvegarde des données éditées
-
-index.html       # Visualiseur de carte principal
-editor.html       # Éditeur de marqueurs
-embed.html         # Vue intégrable (embed)
-embedfull.html      # Vue intégrable complète
-about.html          # Page à propos
-error.html           # Page d'erreur
-options.json          # Configuration des onglets/boutons affichés (menu, liens externes…)
-nginx.conf              # Configuration nginx du site
-install-nginx.sh          # Script d'installation système (nginx + PHP-FPM)
-start-nginx-local.sh        # Script de lancement en local sans sudo
+ShardUI-2-Maps/
+├── index.html            # Visualiseur de carte principal
+├── editor.html           # Éditeur de marqueurs et de frontières
+├── embed.html            # Vue intégrable
+├── embedfull.html        # Vue intégrable complète
+├── locate.html           # Choix d'une position (renvoyée au site)
+├── about.html            # Page à propos
+├── error.html            # Page d'erreur
+├── options.json          # Onglets du menu et boutons externes
+├── assets/
+│   ├── css/              # minedmap.css, themes.css
+│   ├── data/             # Cartes générées (non versionné)
+│   ├── data_exemple/     # Jeux d'exemple par monde
+│   ├── fontawesome/      # Icônes
+│   ├── leaflet/          # Leaflet et ses greffons
+│   ├── images/           # Logos et fonds
+│   ├── vendor/           # Tailwind, DaisyUI, SweetAlert, police Material Icons
+│   └── scripts/
+│       ├── core/         # Socle : env.js (généré), functions.js, shard-api.js, markers.js
+│       ├── layers/       # Un calque de données par domaine : civilisations, commerces,
+│       │                 #   alliances, religions, guerres
+│       ├── pages/        # Un point d'entrée par page : map, embed, locate, editor
+│       ├── editor/       # cartographie.js : dessin des formes et enregistrement
+│       └── ui/           # menu.js : menu, thème clair/sombre, choix de la carte
+├── deploy/
+│   ├── nginx.conf              # Modèle ({{PORT}}, {{ROOT_PATH}})
+│   ├── start-nginx-local.sh    # Lancement local, sans sudo
+│   ├── install-nginx.sh        # Installation système
+│   └── NGINX-SETUP.md          # Détail des règles nginx
+├── scripts/map-generator/      # Génération des cartes et relevé du monde
+└── logs/map-generator/         # Journaux (non versionné)
 ```
+
+Les pages HTML restent à la racine : nginx sert le dossier du projet et réécrit les URL courtes vers ces fichiers.
+
+Chaque page charge ses scripts dans l'ordre, sans module ni build : Leaflet et ses greffons, puis `core/`, puis les
+calques dont elle a besoin, puis son point d'entrée `pages/` et `ui/menu.js`. Les fonctions sont globales.
 
 ## Routes / redirections
 
-Les cartes sont accessibles par des URLs courtes, réécrites par nginx vers les fichiers HTML avec un paramètre `data` :
+Les cartes sont accessibles par des URL courtes, réécrites par nginx vers les fichiers HTML avec un paramètre `data` :
 
 | URL | Cible |
 |---|---|
 | `/tetrago`, `/nether_toit`, … | `index.html?data=<nom>` |
 | `/<nom>-embed` | `embed.html?data=<nom>` |
-| `/<nom>-embedplus` | `embedplus.html?data=<nom>` |
+| `/<nom>-embedfull` | `embedfull.html?data=<nom>` |
+| `/<nom>-locate` | `locate.html?data=<nom>` |
 | `/<nom>-editor` | `editor.html?data=<nom>` |
-| `/api/get/...`, `/api/put/...` | `api/get/*.php`, `api/put/*.php` |
+| `/<nom>-<calque>`, `/<nom>-embedfull-<calque>`, … | même cible, le calque est lu côté page |
+| `/about` | `about.html` |
 
-Le mapping complet des mondes disponibles est défini dans [assets/data/maps.json](assets/data/maps.json). Voir [NGINX-SETUP.md](NGINX-SETUP.md) pour le détail des règles de réécriture.
+Le mapping complet des mondes disponibles est défini dans `assets/data/maps.json`. Voir
+[deploy/NGINX-SETUP.md](deploy/NGINX-SETUP.md) pour le détail des règles de réécriture.
 
 ## Configuration de l'interface
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script d'installation et configuration de nginx pour ShardUI-2-Maps
-# Exécutez ce script avec: sudo bash install-nginx.sh
+# Exécutez ce script avec: sudo bash deploy/install-nginx.sh (ou npm run install:nginx)
 
 set -e
 
@@ -24,21 +24,14 @@ else
     echo "✓ nginx est déjà installé"
 fi
 
-# Installer PHP-FPM si nécessaire (pour les routes API)
-if ! command -v php-fpm &> /dev/null; then
-    echo "Installation de PHP-FPM..."
-    apt-get install -y php-fpm php-cli
-else
-    echo "✓ PHP-FPM est déjà installé"
-fi
-
 # Créer le dossier de configuration nginx
 mkdir -p /etc/nginx/sites-available
 mkdir -p /etc/nginx/sites-enabled
 
 # Racine du site et port d'écoute (surchargeables via variables d'environnement)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_PATH="${ROOT_PATH:-$SCRIPT_DIR}"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT_PATH="${ROOT_PATH:-$PROJECT_DIR}"
 PORT="${PORT:-80}"
 
 # Générer la configuration à partir du template en remplaçant {{PORT}} et {{ROOT_PATH}}

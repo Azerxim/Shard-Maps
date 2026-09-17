@@ -11,15 +11,15 @@
     <link rel="stylesheet" href="/assets/css/minedmap.css" />
 
     <!-- Tailwind CSS & DaisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/vendor/daisyui.css" rel="stylesheet" type="text/css" />
+    <script src="/assets/vendor/tailwind-browser.js"></script>
+    <link href="/assets/vendor/daisyui-themes.css" rel="stylesheet" type="text/css" />
     <link href="/assets/css/themes.css" rel="stylesheet" type="text/css" />
     
-    <!-- Fontawesome & Material Icons -->
+    <!-- Fontawesome & Material Icons (police locale ; L.IconMaterial s'en sert, voir core/markers.js) -->
     <link rel="stylesheet" href="/assets/fontawesome/css/all.css">
     <script defer src="/assets/fontawesome/js/all.js"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/vendor/material-icons.css">
     
     <!-- Leaflet -->
     <link rel="stylesheet" href="/assets/leaflet/leaflet.css" />
@@ -30,23 +30,19 @@
     <script src="/assets/leaflet/plugins/leaflet-geoman.min.js"></script>
     <script src="/assets/leaflet/plugins/leaflet.awesome-markers.js"></script>
     <script src="/assets/leaflet/plugins/leaflet.icon-material.js"></script>
-    
-    <!-- Alertbox -->
-    <script src="https://common.olemiss.edu/_js/sweet-alert/sweet-alert.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://common.olemiss.edu/_js/sweet-alert/sweet-alert.css">
 
     <!-- JS -->
-    <script src="/assets/scripts/functions.js"></script>
-    <script src="/assets/scripts/markers.js"></script>
-    <script src="/assets/scripts/env.js"></script>
-    <script src="/assets/scripts/shard-api.js"></script>
-    <script src="/assets/scripts/markers.civilisations.js"></script>
-    <script src="/assets/scripts/markers.commerces.js"></script>
-    <script src="/assets/scripts/markers.alliances.js"></script>
-    <script src="/assets/scripts/markers.religions.js"></script>
-    <script src="/assets/scripts/markers.guerres.js"></script>
-    <script src="/assets/scripts/locate.minedmap.js"></script>
-    <script src="/assets/scripts/menu.js"></script>
+    <script src="/assets/scripts/core/functions.js"></script>
+    <script src="/assets/scripts/core/markers.js"></script>
+    <script src="/assets/scripts/core/env.js"></script>
+    <script src="/assets/scripts/core/shard-api.js"></script>
+    <script src="/assets/scripts/layers/civilisations.js"></script>
+    <script src="/assets/scripts/layers/commerces.js"></script>
+    <script src="/assets/scripts/layers/alliances.js"></script>
+    <script src="/assets/scripts/layers/religions.js"></script>
+    <script src="/assets/scripts/layers/guerres.js"></script>
+    <script src="/assets/scripts/pages/locate.js"></script>
+    <script src="/assets/scripts/ui/menu.js"></script>
     <style>
       .leaflet-control-layers {
         display: none;

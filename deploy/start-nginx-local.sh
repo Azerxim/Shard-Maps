@@ -4,12 +4,17 @@
 # Utilise un port alternative si 80 n'est pas disponible
 
 HOST=0.0.0.0
-PORT=3005
+# Port d'écoute, surchargeable : PORT=3006 npm run dev
+PORT="${PORT:-3005}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_PATH="$SCRIPT_DIR"
+# Ce script est dans deploy/ : la racine du site est le dossier parent
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT_PATH="$PROJECT_DIR"
 NGINX_CONF="$SCRIPT_DIR/nginx.conf"
-NGINX_TEMP="/tmp/nginx-local"
-ENV_FILE="$SCRIPT_DIR/.env"
+# Dossier de travail de nginx (pid, journaux, configuration générée), surchargeable
+# pour lancer une seconde instance sans toucher à la première
+NGINX_TEMP="${NGINX_TEMP:-/tmp/nginx-local}"
+ENV_FILE="$PROJECT_DIR/.env"
 
 echo "=========================================="
 echo "Démarrage local de nginx"
@@ -38,7 +43,7 @@ fi
 
 # Mode développement (npm run dev) : .env.development surcharge .env
 # (API locale, ShardUI-2 sur le serveur Vite pour l'échange de jeton de l'éditeur)
-ENV_DEV_FILE="$SCRIPT_DIR/.env.development"
+ENV_DEV_FILE="$PROJECT_DIR/.env.development"
 if [ "$MAPS_ENV" = "development" ] && [ -f "$ENV_DEV_FILE" ]; then
     echo "✓ Mode développement : chargement de $ENV_DEV_FILE"
     set -a
@@ -47,11 +52,12 @@ if [ "$MAPS_ENV" = "development" ] && [ -f "$ENV_DEV_FILE" ]; then
     set +a
 fi
 
-# Générer assets/scripts/env.js à partir des variables d'environnement, lu par
+# Générer assets/scripts/core/env.js à partir des variables d'environnement, lu par
 # shard-api.js via window.SHARD_API_BASE_URL. Fichier généré, non versionné.
-echo "✓ Génération de assets/scripts/env.js..."
-cat > "$SCRIPT_DIR/assets/scripts/env.js" << EOF
-// Fichier généré automatiquement par start-nginx-local.sh à partir de .env.
+echo "✓ Génération de assets/scripts/core/env.js..."
+mkdir -p "$PROJECT_DIR/assets/scripts/core"
+cat > "$PROJECT_DIR/assets/scripts/core/env.js" << EOF
+// Fichier généré automatiquement par deploy/start-nginx-local.sh à partir de .env.
 // Ne pas éditer à la main ni committer (voir .gitignore).
 window.SHARD_API_BASE_URL = "${SHARD_API_BASE_URL:-http://localhost:8000/api}";
 window.UI_BASE_URL = "${UI_BASE_URL:-http://localhost:5173}";
@@ -61,14 +67,38 @@ EOF
 # Créer un dossier temporaire pour les fichiers de nginx
 mkdir -p "$NGINX_TEMP"/{cache,pid,logs}
 
-# Arrêter les processus existants sur le port
-if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-    echo "⚠ Le port $PORT est déjà utilisé, arrêt des processus existants..."
-    PID=$(lsof -Pi :$PORT -sTCP:LISTEN -t)
-    if [ ! -z "$PID" ]; then
-        kill -9 $PID 2>/dev/null
-        sleep 1
-        echo "✓ Processus arrêté"
+# Port occupé : on n'arrête que notre propre nginx (celui dont le PID est dans $NGINX_TEMP),
+# jamais un processus tiers. Sinon on s'arrête en expliquant qui occupe le port.
+NGINX_PID_FILE="$NGINX_TEMP/pid/nginx.pid"
+if lsof -Pi :"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    LISTENERS=$(lsof -Pi :"$PORT" -sTCP:LISTEN -t | tr '\n' ' ')
+    OURS=""
+    if [ -f "$NGINX_PID_FILE" ]; then
+        OURS=$(cat "$NGINX_PID_FILE" 2>/dev/null)
+    fi
+
+    if [ -n "$OURS" ] && echo " $LISTENERS " | grep -q " $OURS "; then
+        echo "⚠ Une instance précédente de ce script écoute sur le port $PORT (PID $OURS), arrêt..."
+        # Arrêt propre de nginx, puis TERM en secours ; jamais de kill -9
+        /usr/sbin/nginx -c "$NGINX_TEMP/nginx.full.conf" -s quit 2>/dev/null || kill -TERM "$OURS" 2>/dev/null
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            lsof -Pi :"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1 || break
+            sleep 0.5
+        done
+        if lsof -Pi :"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+            echo "❌ Le port $PORT est toujours occupé après l'arrêt demandé. Vérifiez le processus $OURS."
+            exit 1
+        fi
+        echo "✓ Instance précédente arrêtée"
+    else
+        echo "❌ Le port $PORT est occupé par un processus qui n'appartient pas à ce script :"
+        for pid in $LISTENERS; do
+            echo "     PID $pid : $(ps -p "$pid" -o comm=,args= 2>/dev/null | head -1 | cut -c1-100)"
+        done
+        echo ""
+        echo "   Arrêtez-le vous-même, ou lancez ce script sur un autre port :"
+        echo "     PORT=3006 npm run dev"
+        exit 1
     fi
 fi
 
