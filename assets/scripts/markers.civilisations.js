@@ -3,7 +3,7 @@
  * assets/api/get/civilisations.php à partir de Shard-API (voir shard-api.js).
  *
  * Limites connues par rapport à l'ancien script PHP, faute d'équivalent
- * dans le nouveau modèle de données (Shard-API/api/models.py) :
+ * dans le nouveau modèle de données (Shard-API/api/db/models.py) :
  *  - `inactif` (civilisation/ville) n'existe plus : toujours considéré actif.
  *  - `parc` (ville/quartier) n'existe plus : toujours considéré à "0".
  * Ajuster ce mapping si ces champs sont réintroduits côté API.
