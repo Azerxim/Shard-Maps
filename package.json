@@ -1,6 +1,7 @@
 {
   "name": "Shard-Maps",
-  "version": "2.0.6",
+  "display": "Shard Maps",
+  "version": "2.0.7",
   "private": true,
   "description": "NPM scripts for Shard-Maps",
   "scripts": {

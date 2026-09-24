@@ -2,38 +2,61 @@
 <html data-theme="light">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-		<meta name="robots" content="noindex, nofollow">
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Editeur - ShardUI 2 Maps</title>
-		<link rel="shortcut icon" href="//beta.tetrago.fr/images/logo/tetrago_black_contour.png"/>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Editeur - Shard Maps</title>
+    <link
+      rel="shortcut icon"
+      href="//beta.tetrago.fr/images/logo/tetrago_black_contour.png"
+    />
     <!-- MinedMap -->
     <link rel="stylesheet" href="/assets/css/minedmap.css" />
 
     <!-- Tailwind CSS & DaisyUI -->
     <link href="/assets/vendor/daisyui.css" rel="stylesheet" type="text/css" />
     <script src="/assets/vendor/tailwind-browser.js"></script>
-    <link href="/assets/vendor/daisyui-themes.css" rel="stylesheet" type="text/css" />
+    <link
+      href="/assets/vendor/daisyui-themes.css"
+      rel="stylesheet"
+      type="text/css"
+    />
     <link href="/assets/css/themes.css" rel="stylesheet" type="text/css" />
-    
+
     <!-- Fontawesome & Material Icons (police locale ; L.IconMaterial s'en sert, voir core/markers.js) -->
-    <link rel="stylesheet" href="/assets/fontawesome/css/all.css">
+    <link rel="stylesheet" href="/assets/fontawesome/css/all.css" />
     <script defer src="/assets/fontawesome/js/all.js"></script>
-    <link rel="stylesheet" href="/assets/vendor/material-icons.css">
-    
+
+    <!-- Nom et version de l'application (package.json) -->
+    <script src="/assets/scripts/core/app-info.js"></script>
+    <link rel="stylesheet" href="/assets/vendor/material-icons.css" />
+
     <!-- Leaflet -->
     <link rel="stylesheet" href="/assets/leaflet/leaflet.css" />
     <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet-geoman.css" />
-    <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet.awesome-markers.css">
-    <link rel="stylesheet" href="/assets/leaflet/plugins/leaflet.icon-material.css">
+    <link
+      rel="stylesheet"
+      href="/assets/leaflet/plugins/leaflet.awesome-markers.css"
+    />
+    <link
+      rel="stylesheet"
+      href="/assets/leaflet/plugins/leaflet.icon-material.css"
+    />
     <script src="/assets/leaflet/leaflet.js"></script>
     <script src="/assets/leaflet/plugins/leaflet-geoman.min.js"></script>
     <script src="/assets/leaflet/plugins/leaflet.awesome-markers.js"></script>
     <script src="/assets/leaflet/plugins/leaflet.icon-material.js"></script>
-    
+
     <!-- Alertbox (swal) : utilisée par editor/cartographie.js -->
     <script src="/assets/vendor/sweet-alert.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="/assets/vendor/sweet-alert.css">
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="/assets/vendor/sweet-alert.css"
+    />
 
     <!-- JS -->
     <script src="/assets/scripts/core/functions.js"></script>
@@ -54,27 +77,69 @@
     </div>
 
     <!-- Menu Options -->
-    <div class="flex flex-row-reverse items-center flex-wrap-reverse gap-2 menu-option" id="Options">
+    <div
+      class="flex flex-row-reverse items-center flex-wrap-reverse gap-2 menu-option"
+      id="Options"
+    >
       <!-- Selecteur de Maps -->
       <div class="dropdown dropdown-top dropdown-end">
-        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-map"></i></div>
-        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1" id="Menu">
-        </ul>
+        <div
+          tabindex="0"
+          role="button"
+          class="btn bg-base-200 rounded-box rounded-3xl"
+        >
+          <i class="fa-solid fa-map"></i>
+        </div>
+        <ul
+          tabindex="-1"
+          class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1"
+          id="Menu"
+        ></ul>
       </div>
       <!-- Options Menu -->
       <div class="dropdown dropdown-top dropdown-end">
-        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-bars-staggered"></i></div>
-        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col-reverse gap-1" id="OptionsMenu">
-        </ul>
+        <div
+          tabindex="0"
+          role="button"
+          class="btn bg-base-200 rounded-box rounded-3xl"
+        >
+          <i class="fa-solid fa-bars-staggered"></i>
+        </div>
+        <ul
+          tabindex="-1"
+          class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col-reverse gap-1"
+          id="OptionsMenu"
+        ></ul>
       </div>
       <!-- Theme Selector -->
       <div class="dropdown dropdown-top dropdown-end">
-        <div tabindex="0" role="button" class="btn bg-base-200 rounded-box rounded-3xl"><i class="fa-solid fa-palette"></i></div>
-        <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1">
-          <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('light')"><span>Clair</span><i class="fas fa-sun ml-2"></i></a></li>
+        <div
+          tabindex="0"
+          role="button"
+          class="btn bg-base-200 rounded-box rounded-3xl"
+        >
+          <i class="fa-solid fa-palette"></i>
+        </div>
+        <ul
+          tabindex="-1"
+          class="dropdown-content menu bg-base-200 rounded-box rounded-3xl z-1 p-2 m-1 mb-2 shadow-xl flex-col gap-1"
+        >
+          <li>
+            <a
+              class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+              onclick="setTheme('light')"
+              ><span>Clair</span><i class="fas fa-sun ml-2"></i
+            ></a>
+          </li>
           <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('winter')"><span>Winter</span><i class="fa-solid fa-snowflake ml-2"></i></a></li> -->
           <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('lemonade')"><span>Lemonade</span><i class="fa-solid fa-lemon ml-2"></i></a></li> -->
-          <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dark')"><span>Sombre</span><i class="fas fa-moon ml-2"></i></a></li>
+          <li>
+            <a
+              class="justify-end flex-row gap-2 rounded-box rounded-3xl"
+              onclick="setTheme('dark')"
+              ><span>Sombre</span><i class="fas fa-moon ml-2"></i
+            ></a>
+          </li>
           <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('night')"><span>Night</span><i class="fa-solid fa-star ml-2"></i></a></li> -->
           <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('dim')"><span>Dim</span><i class="fa-solid fa-eye-slash ml-2"></i></a></li> -->
           <!-- <li><a class="justify-end flex-row gap-2 rounded-box rounded-3xl" onclick="setTheme('synthwave')"><span>Synthwave</span><i class="fa-solid fa-music ml-2"></i></a></li> -->
@@ -83,14 +148,34 @@
         </ul>
       </div>
       <!-- Options Buttons -->
-      <div class="flex flex-row-reverse flex-wrap-reverse gap-2" id="OptionsButtons"></div>
+      <div
+        class="flex flex-row-reverse flex-wrap-reverse gap-2"
+        id="OptionsButtons"
+      ></div>
       <!-- Editor Buttons -->
       <div class="flex flex-row flex-wrap-reverse gap-2" id="EditorButtons">
-				<button class="btn gap-1 rounded-box rounded-3xl bg-base-200" onclick="BackButton()"><i class="fa-solid fa-arrow-left"></i><span>Retour</span></button>
-				<span id="EditorInfo" class="badge badge-lg h-auto py-2 rounded-3xl">Chargement...</span>
-				<button class="btn gap-1 rounded-box rounded-3xl btn-success" onclick="saveCartographie()"><span>Save</span></button>
-				<button class="btn gap-1 rounded-box rounded-3xl btn-error" onclick="CancelButton()"><span>Annuler</span></button>
-			</div>
+        <button
+          class="btn gap-1 rounded-box rounded-3xl bg-base-200"
+          onclick="BackButton()"
+        >
+          <i class="fa-solid fa-arrow-left"></i><span>Retour</span>
+        </button>
+        <span id="EditorInfo" class="badge badge-lg h-auto py-2 rounded-3xl"
+          >Chargement...</span
+        >
+        <button
+          class="btn gap-1 rounded-box rounded-3xl btn-success"
+          onclick="saveCartographie()"
+        >
+          <span>Save</span>
+        </button>
+        <button
+          class="btn gap-1 rounded-box rounded-3xl btn-error"
+          onclick="CancelButton()"
+        >
+          <span>Annuler</span>
+        </button>
+      </div>
     </div>
 
     <!-- Map -->
@@ -103,7 +188,7 @@
       BuildMenu();
       BuildOptions();
     </script>
-    
+
     <script>
       // Theme management
       function setTheme(theme) {
@@ -119,7 +204,7 @@
         } else {
           // Use system preference
           const prefersDark = window.matchMedia(
-            "(prefers-color-scheme: dark)"
+            "(prefers-color-scheme: dark)",
           ).matches;
           setTheme(prefersDark ? "dark" : "light");
         }
