@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MARKER="# shardui-2-maps:map-generator"
+MARKER="# Shard-Maps:map-generator"
 
 current="$(crontab -l 2>/dev/null | grep -vF "$MARKER" || true)"
 

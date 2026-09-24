@@ -20,7 +20,8 @@
  * est donc automatiquement reconnu ici. Sans jeton, les appels se font en
  * anonyme (comme un visiteur non connecté côté PHP).
  */
-const SHARD_API_BASE_URL = window.SHARD_API_BASE_URL || "http://localhost:8000/api";
+const SHARD_API_BASE_URL =
+  window.SHARD_API_BASE_URL || "http://localhost:8000/api";
 
 // URL de ShardUI-2 pour les liens des popups, partagée par les scripts
 // markers.*.js (une seule déclaration : ils peuvent être chargés ensemble).
@@ -32,7 +33,12 @@ async function shardApiGet(path) {
   const response = await fetch(SHARD_API_BASE_URL + path, { headers });
   if (!response.ok) {
     throw new Error(
-      "Shard-API " + path + " -> " + response.status + " " + response.statusText
+      "Shard-API " +
+        path +
+        " -> " +
+        response.status +
+        " " +
+        response.statusText,
     );
   }
   const json = await response.json();
@@ -46,18 +52,20 @@ async function shardApiRequest(method, path, body) {
   const token = await shardApiToken();
   if (!token) {
     throw new Error(
-      shardApiAuthError() || "Vous n'êtes pas connecté : ouvrez l'éditeur depuis le site Tetrago."
+      shardApiAuthError() ||
+        "Vous n'êtes pas connecté : ouvrez l'éditeur depuis le site Tetrago.",
     );
   }
 
-  const send = (jwt) => fetch(SHARD_API_BASE_URL + path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + jwt,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const send = (jwt) =>
+    fetch(SHARD_API_BASE_URL + path, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + jwt,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
 
   let response = await send(token);
   if (response.status === 401) {
@@ -71,18 +79,22 @@ async function shardApiRequest(method, path, body) {
     if (response.status === 401) {
       sessionStorage.removeItem("token");
       shardApiTokenPromise = null;
-      throw new Error("Session expirée : reconnectez-vous sur le site Tetrago, puis réessayez.");
+      throw new Error(
+        "Session expirée : reconnectez-vous sur le site Tetrago, puis réessayez.",
+      );
     }
     const detail = json && json.detail;
     throw new Error(
-      typeof detail === "string" ? detail : response.status + " " + response.statusText
+      typeof detail === "string"
+        ? detail
+        : response.status + " " + response.statusText,
     );
   }
   return json;
 }
 
 // Jeton d'authentification de l'éditeur.
-// ShardUI-2 et ShardUI-2-Maps sont servis sur des origines différentes : le
+// ShardUI-2 et Shard-Maps sont servis sur des origines différentes : le
 // localStorage n'est donc pas partagé. Quand l'éditeur est ouvert depuis
 // ShardUI-2 (window.open), il demande le jeton à la page d'origine par postMessage :
 //  - la demande ne contient rien de secret : elle part vers toute origine et est
@@ -122,7 +134,9 @@ function shardApiRequestToken() {
   if (!window.opener || window.opener.closed) {
     // Carte servie sur la même origine que le site : même localStorage
     const local = localStorage.getItem("token");
-    shardApiAuthErrorMessage = local ? null : "ouvrez l'éditeur depuis le site Tetrago pour vous connecter";
+    shardApiAuthErrorMessage = local
+      ? null
+      : "ouvrez l'éditeur depuis le site Tetrago pour vous connecter";
     return Promise.resolve(local);
   }
 
@@ -140,30 +154,53 @@ function shardApiRequestToken() {
       resolve(token || null);
     };
     const onMessage = (event) => {
-      if (event.source !== window.opener || event.data?.source !== "shardui") return;
+      if (event.source !== window.opener || event.data?.source !== "shardui")
+        return;
       if (!uiOrigins.includes(event.origin)) {
-        console.warn("Éditeur : réponse ignorée de l'origine non autorisée " + event.origin);
-        finish(null, `le site ${event.origin} n'est pas autorisé à connecter l'éditeur : ajoutez-le à UI_ALLOWED_ORIGINS dans le .env de la carte`);
+        console.warn(
+          "Éditeur : réponse ignorée de l'origine non autorisée " +
+            event.origin,
+        );
+        finish(
+          null,
+          `le site ${event.origin} n'est pas autorisé à connecter l'éditeur : ajoutez-le à UI_ALLOWED_ORIGINS dans le .env de la carte`,
+        );
         return;
       }
       if (event.data.type === "editor-auth-refused") {
-        finish(null, event.data.reason || "le site a refusé de connecter l'éditeur");
+        finish(
+          null,
+          event.data.reason || "le site a refusé de connecter l'éditeur",
+        );
       } else if (event.data.type === "editor-auth") {
-        finish(event.data.token, "vous n'êtes pas connecté sur le site Tetrago : connectez-vous, puis réessayez");
+        finish(
+          event.data.token,
+          "vous n'êtes pas connecté sur le site Tetrago : connectez-vous, puis réessayez",
+        );
       }
     };
     const ask = () => {
       if (!window.opener || window.opener.closed) {
-        finish(null, "l'onglet du site qui a ouvert l'éditeur a été fermé : rouvrez l'éditeur depuis le site");
+        finish(
+          null,
+          "l'onglet du site qui a ouvert l'éditeur a été fermé : rouvrez l'éditeur depuis le site",
+        );
         return;
       }
-      window.opener.postMessage({ source: "minedmap", type: "editor-auth-request" }, "*");
+      window.opener.postMessage(
+        { source: "minedmap", type: "editor-auth-request" },
+        "*",
+      );
     };
 
     window.addEventListener("message", onMessage);
     const retry = setInterval(ask, SHARD_API_TOKEN_RETRY_MS);
     const timeout = setTimeout(
-      () => finish(null, "le site Tetrago ne répond pas : gardez son onglet ouvert, puis réessayez"),
+      () =>
+        finish(
+          null,
+          "le site Tetrago ne répond pas : gardez son onglet ouvert, puis réessayez",
+        ),
       SHARD_API_TOKEN_TIMEOUT_MS,
     );
     ask();
@@ -172,7 +209,10 @@ function shardApiRequestToken() {
 
 // UI_BASE_URL + UI_ALLOWED_ORIGINS (séparées par des virgules), voir .env.example
 function shardApiAllowedUiOrigins() {
-  const urls = [window.UI_BASE_URL, ...String(window.UI_ALLOWED_ORIGINS || "").split(",")];
+  const urls = [
+    window.UI_BASE_URL,
+    ...String(window.UI_ALLOWED_ORIGINS || "").split(","),
+  ];
   const origins = [];
   for (const url of urls) {
     try {

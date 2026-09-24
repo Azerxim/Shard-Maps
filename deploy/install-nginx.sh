@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script d'installation et configuration de nginx pour ShardUI-2-Maps
+# Script d'installation et configuration de nginx pour Shard-Maps
 # Exécutez ce script avec: sudo bash deploy/install-nginx.sh (ou npm run install:nginx)
 
 set -e

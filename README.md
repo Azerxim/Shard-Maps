@@ -1,4 +1,4 @@
-# ShardUI-2-Maps
+# Shard-Maps
 
 > Documentation complète : [DOCUMENTATION.md](DOCUMENTATION.md).
 
@@ -95,11 +95,11 @@ Options : `run.sh --update-tools` (met à jour paramiko et MinedMap), `--only te
 
 Trois sources de monde possibles :
 
-| Source | Commande |
-| --- | --- |
-| Serveur Minestrator (SFTP) | `npm run maps:generate` |
-| Sauvegarde sur la machine | `npm run maps:generate:world -- /chemin/de/la/sauvegarde` |
-| Copie déjà téléchargée (`work/world`) | `npm run maps:generate:local` |
+| Source                                | Commande                                                  |
+| ------------------------------------- | --------------------------------------------------------- |
+| Serveur Minestrator (SFTP)            | `npm run maps:generate`                                   |
+| Sauvegarde sur la machine             | `npm run maps:generate:world -- /chemin/de/la/sauvegarde` |
+| Copie déjà téléchargée (`work/world`) | `npm run maps:generate:local`                             |
 
 `--local-world` (ou `MAP_LOCAL_WORLD` dans `.env`) accepte le dossier du monde (celui qui contient `level.dat`) ou celui du serveur (le monde est alors trouvé par `level-name` de `server.properties`). Les fichiers sont repris par lien matériel quand c'est possible, donc sans occuper d'espace disque supplémentaire, et la sauvegarde n'est jamais modifiée. Sur un serveur en cours d'exécution, préférer une sauvegarde arrêtée : les régions peuvent être incomplètes.
 
@@ -107,13 +107,13 @@ Trois sources de monde possibles :
 
 [world_stats.py](scripts/map-generator/world_stats.py) lit la sauvegarde après la génération des cartes (le serveur est en Fabric, sans greffon : tout vient des fichiers) et envoie un relevé à Shard-API, consultable par les administrateurs sur `/admin/monde`.
 
-| Mesure | Source dans la sauvegarde |
-| --- | --- |
-| Présence des joueurs | `InhabitedTime` de chaque chunk (`region/*.mca`) |
-| Population d'une ville | lits posés dans les chunks fréquentés, à l'intérieur de ses frontières |
-| Villageois et entités | `entities/*.mca` |
-| Joueurs | `playerdata/*.dat` (position, lit, niveau) et `stats/*.json` (temps de jeu, morts, distance) |
-| Pseudos | `usercache.json` du serveur, sinon le compte Minecraft lié sur le site, sinon playerdb.co (côté API) |
+| Mesure                 | Source dans la sauvegarde                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| Présence des joueurs   | `InhabitedTime` de chaque chunk (`region/*.mca`)                                                     |
+| Population d'une ville | lits posés dans les chunks fréquentés, à l'intérieur de ses frontières                               |
+| Villageois et entités  | `entities/*.mca`                                                                                     |
+| Joueurs                | `playerdata/*.dat` (position, lit, niveau) et `stats/*.json` (temps de jeu, morts, distance)         |
+| Pseudos                | `usercache.json` du serveur, sinon le compte Minecraft lié sur le site, sinon playerdb.co (côté API) |
 
 La population ne compte que les lits des chunks où les joueurs ont réellement passé du temps (`MAP_STATS_BED_HOURS`, 10 h par défaut) : sans ce tri, les villages générés par le jeu écrasent les villes des joueurs. **À chaque relevé, la population des villes et des quartiers du site est remplacée par cette mesure** (une valeur saisie à la main ne survit donc pas au relevé suivant) ; les villes d'une dimension absente de la sauvegarde ne sont pas touchées, et la valeur précédente reste consultable dans le relevé. Une ville sans frontières tracées sur la carte est mesurée dans un rayon autour de son point, ce que la page d'administration signale : **tracer les frontières est ce qui rend la mesure fiable**.
 
@@ -133,7 +133,7 @@ L'envoi demande `MAP_STATS_API_KEY`, qui doit valoir `platforms.monde.key` dans 
 ## Structure du projet
 
 ```
-ShardUI-2-Maps/
+Shard-Maps/
 ├── index.html            # Visualiseur de carte principal
 ├── editor.html           # Éditeur de marqueurs et de frontières
 ├── embed.html            # Vue intégrable
@@ -175,15 +175,15 @@ calques dont elle a besoin, puis son point d'entrée `pages/` et `ui/menu.js`. L
 
 Les cartes sont accessibles par des URL courtes, réécrites par nginx vers les fichiers HTML avec un paramètre `data` :
 
-| URL | Cible |
-|---|---|
-| `/tetrago`, `/nether_toit`, … | `index.html?data=<nom>` |
-| `/<nom>-embed` | `embed.html?data=<nom>` |
-| `/<nom>-embedfull` | `embedfull.html?data=<nom>` |
-| `/<nom>-locate` | `locate.html?data=<nom>` |
-| `/<nom>-editor` | `editor.html?data=<nom>` |
+| URL                                               | Cible                                  |
+| ------------------------------------------------- | -------------------------------------- |
+| `/tetrago`, `/nether_toit`, …                     | `index.html?data=<nom>`                |
+| `/<nom>-embed`                                    | `embed.html?data=<nom>`                |
+| `/<nom>-embedfull`                                | `embedfull.html?data=<nom>`            |
+| `/<nom>-locate`                                   | `locate.html?data=<nom>`               |
+| `/<nom>-editor`                                   | `editor.html?data=<nom>`               |
 | `/<nom>-<calque>`, `/<nom>-embedfull-<calque>`, … | même cible, le calque est lu côté page |
-| `/about` | `about.html` |
+| `/about`                                          | `about.html`                           |
 
 Le mapping complet des mondes disponibles est défini dans `assets/data/maps.json`. Voir
 [deploy/NGINX-SETUP.md](deploy/NGINX-SETUP.md) pour le détail des règles de réécriture.

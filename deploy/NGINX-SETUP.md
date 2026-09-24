@@ -1,6 +1,6 @@
-# Configuration nginx de ShardUI-2-Maps
+# Configuration nginx de Shard-Maps
 
-ShardUI-2-Maps est un site statique : nginx sert le dossier du projet et réécrit des URL courtes
+Shard-Maps est un site statique : nginx sert le dossier du projet et réécrit des URL courtes
 (`/tetrago-embedfull-civilisations`) vers les pages HTML de la racine. Il n'y a ni build ni langage serveur —
 les données viennent de Shard-API, interrogée par le navigateur.
 
@@ -45,20 +45,20 @@ Ce script **ne génère pas** `assets/scripts/core/env.js` : le créer une fois 
 comporter jusqu'à trois segments séparés par `_`. `<calque>` est un onglet de `options.json`
 (`civilisations`, `commerces`, `alliances`, `religions`, `guerres`) ou un thème.
 
-| URL | Cible |
-| --- | --- |
-| `/<nom>` | `index.html?data=<nom>` |
-| `/<nom>-embed` | `embed.html?data=<nom>` |
-| `/<nom>-embedfull` | `embedfull.html?data=<nom>` |
-| `/<nom>-locate` | `locate.html?data=<nom>` |
-| `/<nom>-editor` | `editor.html?data=<nom>` |
-| `/<nom>-<calque>` | `index.html?data=<nom>` |
-| `/<nom>-embed-<calque>` | `embed.html?data=<nom>` |
-| `/<nom>-embedfull-<calque>` | `embedfull.html?data=<nom>` |
-| `/<nom>-locate-<calque>` | `locate.html?data=<nom>` |
-| `/<nom>-editor-<calque>` | `editor.html?data=<nom>` |
-| `/about` | `about.html` |
-| `/assets/...` | Fichiers statiques, servis tels quels |
+| URL                         | Cible                                 |
+| --------------------------- | ------------------------------------- |
+| `/<nom>`                    | `index.html?data=<nom>`               |
+| `/<nom>-embed`              | `embed.html?data=<nom>`               |
+| `/<nom>-embedfull`          | `embedfull.html?data=<nom>`           |
+| `/<nom>-locate`             | `locate.html?data=<nom>`              |
+| `/<nom>-editor`             | `editor.html?data=<nom>`              |
+| `/<nom>-<calque>`           | `index.html?data=<nom>`               |
+| `/<nom>-embed-<calque>`     | `embed.html?data=<nom>`               |
+| `/<nom>-embedfull-<calque>` | `embedfull.html?data=<nom>`           |
+| `/<nom>-locate-<calque>`    | `locate.html?data=<nom>`              |
+| `/<nom>-editor-<calque>`    | `editor.html?data=<nom>`              |
+| `/about`                    | `about.html`                          |
+| `/assets/...`               | Fichiers statiques, servis tels quels |
 
 Le calque n'est pas transmis en paramètre : la page le lit dans son URL. Toute autre adresse tombe sur la page
 d'accueil ou une 404 selon la règle qui correspond.
