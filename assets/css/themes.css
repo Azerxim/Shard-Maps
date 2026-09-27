@@ -1,36 +1,40 @@
+/* Charte Tetrago : les quatre émaux des bannières du logo
+   (sinople, gueules, azur, or), une encre pour les contours et un os pour les fonds clairs.
+   Mêmes valeurs que ShardUI-2/src/App.css. */
+
 :root:has(input.theme-controller[value="light"]:checked),
 [data-theme="light"] {
   color-scheme: light;
-  /* Palette inspirée du logo : ciel brumeux, continents verts, anneau doré */
-  --color-base-0: oklch(100% 0 0);
-  --color-base-50: oklch(96% 0 240);
-  --color-base-100: oklch(97% 0.008 240);
-  --color-base-150: oklch(95% 0.01 240);
-  --color-base-200: oklch(93% 0.014 238);
-  --color-base-250: oklch(90% 0.018 238);
-  --color-base-300: oklch(87% 0.022 238);
-  --color-base-400: oklch(80% 0.028 238);
-  --color-base-500: oklch(72% 0.034 238);
-  --color-base-content: oklch(18% 0.032 248);
-  --color-primary: oklch(70% 0.142 80); /* or ambré — anneau orbital */
-  --color-primary-content: oklch(14% 0.04 78);
-  --color-secondary: oklch(56% 0.152 148); /* vert forêt — continents */
-  --color-secondary-content: oklch(97% 0.018 148);
-  --color-accent: oklch(42% 0.068 238); /* bleu-ardoise — océans */
-  --color-accent-content: oklch(95% 0.014 240);
-  --color-neutral: oklch(22% 0.04 245);
-  --color-neutral-content: oklch(93% 0.008 240);
-  --color-info: oklch(58% 0.12 238);
-  --color-info-content: oklch(96% 0.014 238);
-  --color-success: oklch(60% 0.148 148);
-  --color-success-content: oklch(97% 0.018 148);
-  --color-warning: oklch(74% 0.148 80);
-  --color-warning-content: oklch(16% 0.04 78);
-  --color-error: oklch(62% 0.205 24);
-  --color-error-content: oklch(97% 0.018 24);
-  --radius-selector: 0.75rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
+  /* Les quatre émaux sur fond d'os */
+  --color-base-0: #ffffff;
+  --color-base-50: #f7f2ea;
+  --color-base-100: #fbf8f2;
+  --color-base-150: #f4efe6;
+  --color-base-200: #f4efe6;
+  --color-base-250: #efe9dd;
+  --color-base-300: #ece5d8;
+  --color-base-400: #d9cfbe;
+  --color-base-500: #c4b8a3;
+  --color-base-content: #17131f;
+  --color-primary: #e3a82b; /* or */
+  --color-primary-content: #1f1400;
+  --color-secondary: #2e4fb0; /* azur */
+  --color-secondary-content: #ffffff;
+  --color-accent: #1f7a55; /* sinople */
+  --color-accent-content: #ffffff;
+  --color-neutral: #17131f; /* encre */
+  --color-neutral-content: #f1ece3;
+  --color-info: #2e4fb0;
+  --color-info-content: #ffffff;
+  --color-success: #1f7a55;
+  --color-success-content: #ffffff;
+  --color-warning: #c98a12;
+  --color-warning-content: #1f1400;
+  --color-error: #b3263a; /* gueules */
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -41,39 +45,69 @@
 :root:has(input.theme-controller[value="dark"]:checked),
 [data-theme="dark"] {
   color-scheme: dark;
-  /* Palette inspirée du logo : profondeurs océaniques, continents lumineux, anneau doré */
-  --color-base-0: oklch(0% 0 0);
-  --color-base-50: oklch(20% 0.03 244);
-  --color-base-100: oklch(26% 0.045 244);
-  --color-base-150: oklch(24% 0.042 244);
-  --color-base-200: oklch(22% 0.038 244);
-  --color-base-250: oklch(20% 0.034 244);
-  --color-base-300: oklch(19% 0.032 244);
-  --color-base-400: oklch(16% 0.026 244);
-  --color-base-500: oklch(13% 0.018 244);
-  --color-base-content: oklch(95% 0.014 244);
-  --color-primary: oklch(72% 0.148 80); /* or ambré — anneau orbital */
-  --color-primary-content: oklch(14% 0.04 78);
-  --color-secondary: oklch(62% 0.162 148); /* vert forêt vif — continents */
-  --color-secondary-content: oklch(97% 0.018 148);
-  --color-accent: oklch(64% 0.108 200); /* bleu-teal — reflets océan */
-  --color-accent-content: oklch(18% 0.038 200);
-  --color-neutral: oklch(14% 0.028 248);
-  --color-neutral-content: oklch(90% 0.01 240);
-  --color-info: oklch(62% 0.118 232);
-  --color-info-content: oklch(96% 0.014 232);
-  --color-success: oklch(62% 0.155 148);
-  --color-success-content: oklch(97% 0.018 148);
-  --color-warning: oklch(72% 0.148 80);
-  --color-warning-content: oklch(14% 0.04 78);
-  --color-error: oklch(64% 0.205 24);
-  --color-error-content: oklch(97% 0.018 24);
-  --radius-selector: 0.75rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
+  /* Les quatre émaux sur encre */
+  --color-base-0: #000000;
+  --color-base-50: #19161f;
+  --color-base-100: #221e2d;
+  --color-base-150: #1f1b29;
+  --color-base-200: #1c1926;
+  --color-base-250: #1a1722;
+  --color-base-300: #17141d;
+  --color-base-400: #121017;
+  --color-base-500: #0d0b11;
+  --color-base-content: #f1ece3;
+  --color-primary: #e8b04a; /* or */
+  --color-primary-content: #1f1400;
+  --color-secondary: #6f8ff0; /* azur */
+  --color-secondary-content: #0d1230;
+  --color-accent: #45b584; /* sinople */
+  --color-accent-content: #06170f;
+  --color-neutral: #0d0b11; /* encre */
+  --color-neutral-content: #f1ece3;
+  --color-info: #6f8ff0;
+  --color-info-content: #0d1230;
+  --color-success: #45b584;
+  --color-success-content: #06170f;
+  --color-warning: #e8b04a;
+  --color-warning-content: #1f1400;
+  --color-error: #e5566b; /* gueules */
+  --color-error-content: #1a0509;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
   --depth: 0;
   --noise: 0;
+}
+
+/* Polices et arrondis de la charte. Déclarées hors couche, ces variables
+   l'emportent sur celles du thème Tailwind (@layer theme). */
+:root {
+  --font-sans: "Alegreya Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Almendra", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "Almendra", "Iowan Old Style", Georgia, serif;
+  /* rounded-3xl et rounded-2xl suivent --radius-box (12 px), comme sur le site */
+  --radius-3xl: 0.75rem;
+  --radius-2xl: 0.625rem;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+.card-title,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Leaflet fixe sa propre police (leaflet.css, chargé après) : on la surclasse */
+body .leaflet-container {
+  font-family: var(--font-sans);
 }

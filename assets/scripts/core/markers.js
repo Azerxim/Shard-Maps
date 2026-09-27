@@ -1,7 +1,7 @@
 var udbIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#2e3144",
+  markerColor: "#17131f",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -9,7 +9,7 @@ var udbIcon = L.IconMaterial.icon({
 var redIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#d32300",
+  markerColor: "#b3263a",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -17,7 +17,7 @@ var redIcon = L.IconMaterial.icon({
 var blueIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#008ed7",
+  markerColor: "#2e4fb0",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -25,7 +25,7 @@ var blueIcon = L.IconMaterial.icon({
 var cyanIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#167b8c",
+  markerColor: "#169c9c",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -33,7 +33,7 @@ var cyanIcon = L.IconMaterial.icon({
 var upIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#6821a0",
+  markerColor: "#8932b8",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -41,7 +41,7 @@ var upIcon = L.IconMaterial.icon({
 var yellowIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#F0C300",
+  markerColor: "#e3a82b",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -49,7 +49,7 @@ var yellowIcon = L.IconMaterial.icon({
 var greenIcon = L.IconMaterial.icon({
   icon: "",
   iconColor: "#fff",
-  markerColor: "#219653",
+  markerColor: "#1f7a55",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -58,7 +58,7 @@ var greenIcon = L.IconMaterial.icon({
 var SpawnIcon = L.IconMaterial.icon({
   icon: "home",
   iconColor: "#fff",
-  markerColor: "#000",
+  markerColor: "#17131f",
   outlineColor: "white",
   outlineWidth: 0.5,
   iconSize: [31, 42],
@@ -82,7 +82,7 @@ var QuartierIcon = L.AwesomeMarkers.icon({
   markerColor: "green",
 });
 // Marqueurs de cartographie des civilisations (couleur choisie dans l'éditeur)
-var CartographieMarkerDefaultColor = "#6821a0";
+var CartographieMarkerDefaultColor = "#8932b8";
 function CartographieMarkerIcon(color) {
   return L.IconMaterial.icon({
     icon: "flag",
@@ -113,18 +113,19 @@ function CartographieTextMarker(coords, text, color, options = {}) {
 // Couleurs des religions : champ `color` de la religion s'il s'agit d'une
 // couleur CSS valide (ce qui exclut toute injection dans le HTML/SVG), sinon
 // couleur de la palette dérivée de l'identifiant. Même règle que ShardUI-2
-// (src/components/Functions/religionColor.js), une religion garde sa couleur.
+// (src/utils/religionColor.js), une religion garde sa couleur.
+// Palette : teintures de bannière du jeu (charte Tetrago).
 var ReligionColors = [
-  "#2563eb",
-  "#dc2626",
-  "#16a34a",
-  "#d97706",
-  "#9333ea",
-  "#0891b2",
-  "#db2777",
-  "#65a30d",
-  "#ea580c",
-  "#4f46e5",
+  "#3c44aa", // bleu
+  "#b02e26", // rouge
+  "#5e7c16", // vert
+  "#f9801d", // orange
+  "#8932b8", // violet
+  "#169c9c", // cyan
+  "#c74ebd", // magenta
+  "#80c71f", // vert clair
+  "#835432", // marron
+  "#3ab3da", // bleu clair
 ];
 function ReligionColor(religion) {
   const color = typeof religion?.color === "string" ? religion.color.trim() : "";

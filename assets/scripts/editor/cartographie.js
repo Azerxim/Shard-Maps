@@ -21,17 +21,17 @@ const CARTOGRAPHIE_EDITOR_MODES = {
   ville: {
     label: "Frontières",
     shapes: ["Polygon", "Rectangle"],
-    defaultColor: "#3388ff",
+    defaultColor: "#2e4fb0",
   },
   quartier: {
     label: "Frontières du quartier",
     shapes: ["Polygon", "Rectangle"],
-    defaultColor: "#f59e0b",
+    defaultColor: "#e3a82b",
   },
   guerre: {
     label: "Zones de conflit",
     shapes: ["Polygon", "Rectangle", "Marker"],
-    defaultColor: "#dc2626",
+    defaultColor: "#b3263a",
   },
 };
 
@@ -487,7 +487,7 @@ async function saveCartographie() {
       title: "Oops...",
       text: errors.join("\n"),
       type: "error",
-      confirmButtonColor: "#d32300",
+      confirmButtonColor: "#b3263a",
       confirmButtonText: "Ok",
     });
   } else {
@@ -497,7 +497,7 @@ async function saveCartographie() {
       title: "",
       text: count ? "Modifications enregistrées" : "Aucune modification à enregistrer",
       type: "success",
-      confirmButtonColor: "#2E3144",
+      confirmButtonColor: "#2e4fb0",
       confirmButtonText: "Ok",
     });
   }
@@ -510,7 +510,7 @@ function CancelButton() {
       text: "Êtes vous sur de vouloir annuler les modifications non enregistrées ?",
       type: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d32300",
+      confirmButtonColor: "#b3263a",
       confirmButtonText: "Oui",
       cancelButtonText: "Non",
       closeOnConfirm: true,
@@ -555,7 +555,7 @@ function BackButton() {
       text: "Des modifications ne sont pas enregistrées. Quitter l'éditeur quand même ?",
       type: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d32300",
+      confirmButtonColor: "#b3263a",
       confirmButtonText: "Quitter",
       cancelButtonText: "Rester",
       closeOnConfirm: true,

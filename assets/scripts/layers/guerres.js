@@ -5,7 +5,7 @@
  * UI_BASE_URL est déclarée par shard-api.js.
  */
 
-const GUERRE_ZONE_COLORS = { en_cours: "#dc2626", terminee: "#6b7280" };
+const GUERRE_ZONE_COLORS = { en_cours: "#b3263a", terminee: "#6b7280" };
 
 async function fetchGuerresPosts(world) {
   const [guerres, cartographies, dimensions] = await Promise.all([

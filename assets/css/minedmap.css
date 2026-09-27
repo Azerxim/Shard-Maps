@@ -8,7 +8,7 @@ html, body, #map {
 }
 
 body, .leaflet-container {
-    background: #333;
+    background: #17131f;
 }
 
 body::-webkit-scrollbar {
