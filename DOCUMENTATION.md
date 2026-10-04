@@ -249,7 +249,7 @@ carte affichée. Les liens des popups pointent vers `UI_BASE_URL`.
 | Calque        | Script                    | Données                                                   | Affichage                                                                                     |
 | ------------- | ------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Civilisations | `layers/civilisations.js` | civilisations, villes, quartiers, cartographie, habitants | Marqueurs, frontières des villes et quartiers, popups avec population et nombre d'habitants   |
-| Commerces     | `layers/commerces.js`     | commerces et magasins                                     | Magasins, icône propre pour le siège                                                          |
+| Commerces     | `layers/commerces.js`     | commerces et magasins, cartographie `commerciale`         | Magasins, icône propre pour le siège ; zones commerciales des villes publiques avec la liste de leurs boutiques (magasins situés à l'intérieur) |
 | Religions     | `layers/religions.js`     | religions et leur présence                                | Villes à la couleur de la religion majoritaire, répartition dans la popup, gris sans religion |
 | Alliances     | `layers/alliances.js`     | `/alliances/list`                                         | Villes et frontières aux couleurs de l'alliance (militaire en priorité)                       |
 | Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre` et `destructible`, `/civilisations/list` | Zones rouges pendant la guerre, grises une fois terminée ; bâtiments (flamme) et zones (pointillés) destructibles des villes publiques, « Menacé » si la civilisation est engagée dans une guerre en cours |
@@ -281,6 +281,7 @@ L'éditeur s'ouvre depuis le site (`openMapEditor` de ShardUI-2) :
 | `quartier=ID`     | Frontières du quartier | Polygone, rectangle           | `#f59e0b`             |
 | `guerre=ID`       | Zones de conflit       | Polygone, rectangle, marqueur | `#dc2626`             |
 | `destructible=ID` | Zones et bâtiments destructibles (ID de la ville) | Marqueur (bâtiment), polygone, rectangle (zone) | `#c98a12` |
+| `commerciale=ID`  | Zones commerciales : marchés et quartiers marchands (ID de la ville) | Polygone, rectangle | `#e3a82b` |
 
 Les autres civilisations et villes sont affichées en lecture seule. Les modifications restent locales jusqu'au
 bouton d'enregistrement, qui appelle `/cartographie/create`, `/update/{id}` et `/delete/{id}`. Les coordonnées sont

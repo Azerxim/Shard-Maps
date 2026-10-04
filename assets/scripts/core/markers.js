@@ -105,6 +105,17 @@ function DestructibleMarkerIcon(color) {
     iconSize: [31, 42],
   });
 }
+// Zone commerciale (vue Commerces) : marqueur à son centre, pour la repérer même dézoomé
+function ZoneCommercialeMarkerIcon(color) {
+  return L.IconMaterial.icon({
+    icon: "storefront",
+    iconColor: "#fff",
+    markerColor: color || "#e3a82b",
+    outlineColor: "white",
+    outlineWidth: 0.5,
+    iconSize: [31, 42],
+  });
+}
 // Textes de cartographie en lecture seule (même rendu que la zone de texte
 // de leaflet-geoman utilisée dans l'éditeur)
 var CartographieTextDefaultColor = "#f2f2f2";

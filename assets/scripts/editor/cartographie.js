@@ -7,6 +7,7 @@
  *  - {dimension}-editor-civilisations?quartier=ID     : frontières du quartier
  *  - {dimension}-editor-civilisations?guerre=ID       : zones de conflit d'une guerre en cours
  *  - {dimension}-editor-civilisations?destructible=ID : bâtiments (marqueurs) et zones destructibles d'une ville
+ *  - {dimension}-editor-civilisations?commerciale=ID  : marchés et quartiers marchands d'une ville
  *
  * Les autres civilisations / villes sont affichées en lecture seule pour le
  * contexte. Les modifications restent locales jusqu'au clic sur "Save".
@@ -42,6 +43,14 @@ const CARTOGRAPHIE_EDITOR_MODES = {
     defaultColor: "#c98a12",
     titlePlaceholder: "Nom du bâtiment ou de la zone",
     removeLabels: { Marker: "le bâtiment", Polygon: "la zone", Rectangle: "la zone" },
+  },
+  // Marchés et quartiers marchands de la ville : leurs boutiques sont les magasins situés à l'intérieur
+  commerciale: {
+    label: "Zones commerciales",
+    shapes: ["Polygon", "Rectangle"],
+    defaultColor: "#e3a82b",
+    titlePlaceholder: "Nom du marché ou du quartier marchand",
+    removeLabels: { Polygon: "la zone", Rectangle: "la zone" },
   },
 };
 
@@ -92,7 +101,7 @@ function setEditorInfo(text, className = "") {
 
 async function loadCartographieEditorEntity(pathname) {
   const search = parseSearch();
-  const type = ["civilisation", "ville", "quartier", "guerre", "destructible"].find((key) => search[key]);
+  const type = ["civilisation", "ville", "quartier", "guerre", "destructible", "commerciale"].find((key) => search[key]);
   if (!type) return null;
 
   const typeId = parseInt(search[type]);
@@ -113,7 +122,7 @@ async function loadCartographieEditorEntity(pathname) {
     const infos = await shardApiGet(`/civilisations/quartiers/read/${typeId}`);
     entity = infos.quartier ? { ...infos.quartier, ville: infos.ville } : null;
   } else {
-    // Ville : ses frontières, ou ses bâtiments et zones destructibles
+    // Ville : ses frontières, ses bâtiments et zones destructibles, ou ses zones commerciales
     entity = (await shardApiGet(`/civilisations/villes/id/${typeId}`)).ville;
   }
   if (!entity) throw new Error(`${type} ${typeId} introuvable`);
@@ -387,8 +396,9 @@ async function setupCartographieEditor(map, pathname) {
     e.layer.options.pmIgnore = false;
     L.PM.reInitLayer(e.layer);
     registerCartographieLayer(e.layer, e.shape, {
-      // Frontière de ville ou de quartier : titrée d'après l'entité ; marqueur et élément destructible : à nommer
-      title: data.type !== "civilisation" && data.type !== "destructible" ? data.entity.title : "",
+      // Frontière de ville ou de quartier, zone de conflit : titrée d'après l'entité ; marqueur, élément destructible
+      // et zone commerciale : à nommer
+      title: ["ville", "quartier", "guerre"].includes(data.type) ? data.entity.title : "",
     });
     if (e.shape === "Text") {
       // En opt-in, geoman n'a pas pu activer la saisie au moment du dessin
@@ -540,7 +550,7 @@ function cartographieEditorBackUrl() {
   const { type, typeId, entity } = cartographieEditor;
   if (type === "guerre") return `${base}/guerre/${typeId}`;
   if (type === "quartier") return `${base}/quartier/${typeId}`;
-  if (type === "ville" || type === "destructible") return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
+  if (["ville", "destructible", "commerciale"].includes(type)) return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
   return `${base}/civilisation/${typeId}`;
 }
 
