@@ -5,11 +5,30 @@
  *
  * S'y ajoutent les zones commerciales des villes publiques (cartographies de type "commerciale", tracées avec
  * ?commerciale=ID de la ville) : marchés et quartiers marchands, dont la popup liste les boutiques situées à l'intérieur.
- * Chaque zone a aussi un marqueur à son centre, à son nom, pour la repérer même dézoomé.
+ * Chaque zone a aussi un marqueur à son centre, à son nom, pour la repérer même dézoomé, et sa popup donne ses jours
+ * de marché. Les foires à venir des villes publiques (Shard-API /marches/list) ont chacune leur marqueur.
  * UI_BASE_URL est déclaré par shard-api.js.
  */
 
 var ZoneCommercialeDefaultColor = "#e3a82b";
+var JoursSemaine = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+
+// [5] → « le samedi » ; [2, 5] → « le mercredi et le samedi » (même règle que ShardUI-2, config/marches.js)
+function joursTexte(jours) {
+  if (!jours || jours.length === 0) return "";
+  if (jours.length === 7) return "tous les jours";
+  const noms = jours.map((jour) => `le ${JoursSemaine[jour]}`);
+  return noms.length === 1 ? noms[0] : `${noms.slice(0, -1).join(", ")} et ${noms[noms.length - 1]}`;
+}
+
+// « le samedi 10 octobre 2026 » ou « du vendredi 9 octobre 2026 au samedi 10 octobre 2026 » (dates ISO, heure locale)
+function periodeFoire(foire) {
+  const date = (iso) => {
+    const [annee, mois, jour] = String(iso).split("-").map(Number);
+    return new Date(annee, mois - 1, jour).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
+  return foire.date_fin && foire.date_fin !== foire.date_debut ? `du ${date(foire.date_debut)} au ${date(foire.date_fin)}` : `le ${date(foire.date_debut)}`;
+}
 
 // Point [-z, x] dans un polygone [[-z, x], …] (lancer de rayon)
 function pointDansZone(point, sommets) {
@@ -30,11 +49,12 @@ const SiegeIcon = L.AwesomeMarkers.icon({
 });
 
 async function fetchCommercesPosts(world) {
-  const [commerces, dimensions, villes, cartographies] = await Promise.all([
+  const [commerces, dimensions, villes, cartographies, marches] = await Promise.all([
     shardApiGet("/commerces/list?limit=1000"),
     shardApiGet("/cartographie/dimensions/read?limit=1000"),
     shardApiGet("/civilisations/villes/list?limit=1000"),
     shardApiGetOptional("/cartographie/list?limit=1000", []),
+    shardApiGetOptional("/marches/list", { jours: [], foires: [] }),
   ]);
 
   const dimension = dimensions.find(
@@ -47,6 +67,8 @@ async function fetchCommercesPosts(world) {
     villes: new Map(villes.map((ville) => [ville.id, ville])),
     dimension: dimension,
     zones: cartographies.filter((carto) => carto.type === "commerciale" && dimension && carto.dimension_id === dimension.id && villesPubliques.has(carto.type_id)),
+    jours: new Map((marches.jours || []).map((marche) => [marche.cartographie_id, marche])),
+    foires: (marches.foires || []).filter((foire) => dimension && foire.dimension_id === dimension.id && foire.x != null && foire.z != null),
   };
 
   return posts;
@@ -115,6 +137,8 @@ async function MarkersCommerces(world) {
     }
     const ville = datas.villes.get(zone.type_id);
     const dedans = boutiques.filter((boutique) => pointDansZone(boutique.point, sommets));
+    const marche = datas.jours.get(zone.id);
+    const ouverture = marche ? [joursTexte(marche.jours) && `Ouvert ${joursTexte(marche.jours)}`, marche.horaires].filter(Boolean).join(", ") : "";
     const liste = dedans.length
       ? `<ul style="margin:0;padding-left:1.1rem;list-style:disc">${dedans.map(({ commerce, magasin }) => `<li><a href="${UI_BASE_URL}/commerce/${commerce.id}" class="link">${escapeHtml(magasin.title)}</a> (${escapeHtml(commerce.title)})</li>`).join("")}</ul>`
       : "<i>Aucune boutique pour l'instant.</i>";
@@ -125,6 +149,7 @@ async function MarkersCommerces(world) {
           <b>${escapeHtml(zone.title || "Sans nom")}</b>
         </div>
         ${zone.description ? `<span>${escapeHtml(zone.description)}</span>` : ""}
+        ${ouverture ? `<span><b>${escapeHtml(ouverture)}</b></span>` : ""}
         ${ville ? `<div class="flex flex-row gap-2"><span>Ville:</span><span>${escapeHtml(ville.title)}</span></div>` : ""}
         <div class="flex flex-col gap-1"><span>Boutiques (${dedans.length}):</span>${liste}</div>
         ${ville ? `<a href="${UI_BASE_URL}/civilisation/${ville.civilisation_id}/ville/${ville.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>` : ""}
@@ -151,6 +176,32 @@ async function MarkersCommerces(world) {
       icon: ZoneCommercialeMarkerIcon(color),
       popup: popup,
       tooltip: tooltip,
+    });
+  }
+
+  // Foires à venir ou en cours : dans leur zone commerciale, sinon au centre de la ville
+  for (const foire of datas.foires) {
+    const ville = foire.ville;
+    popup = `
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-row gap-2">
+          <span>Foire:</span>
+          <b>${escapeHtml(foire.title)}</b>
+        </div>
+        <span>${escapeHtml(periodeFoire(foire))}${foire.horaires ? `, ${escapeHtml(foire.horaires)}` : ""}</span>
+        ${ville ? `<div class="flex flex-row gap-2"><span>Ville:</span><span>${escapeHtml(ville.title)}</span></div>` : ""}
+        ${foire.zone ? `<div class="flex flex-row gap-2"><span>Lieu:</span><span>${escapeHtml(foire.zone.title || "Zone commerciale")}</span></div>` : ""}
+        ${foire.description ? `<span>${escapeHtml(foire.description)}</span>` : ""}
+        ${ville ? `<a href="${UI_BASE_URL}/civilisation/${ville.civilisation_id}/ville/${ville.id}#marches" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>` : ""}
+      </div>`;
+    markers.push({
+      type: "Markers",
+      dbid: foire.id,
+      option: "foire",
+      coords: "[" + parseInt(-1 * foire.z) + "," + parseInt(foire.x) + "]",
+      icon: FoireMarkerIcon(),
+      popup: popup,
+      tooltip: `<b class="">Foire : ${escapeHtml(foire.title)}</b>`,
     });
   }
 

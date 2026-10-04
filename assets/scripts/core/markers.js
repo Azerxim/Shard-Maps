@@ -116,6 +116,18 @@ function ZoneCommercialeMarkerIcon(color) {
     iconSize: [31, 42],
   });
 }
+// Foire annoncée par une ville (vue Commerces) : Shard-API /marches/list
+var FoireColor = "#b02e26";
+function FoireMarkerIcon() {
+  return L.IconMaterial.icon({
+    icon: "festival",
+    iconColor: "#fff",
+    markerColor: FoireColor,
+    outlineColor: "white",
+    outlineWidth: 0.5,
+    iconSize: [31, 42],
+  });
+}
 // Textes de cartographie en lecture seule (même rendu que la zone de texte
 // de leaflet-geoman utilisée dans l'éditeur)
 var CartographieTextDefaultColor = "#f2f2f2";
