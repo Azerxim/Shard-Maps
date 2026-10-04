@@ -93,6 +93,18 @@ function CartographieMarkerIcon(color) {
     iconSize: [31, 42],
   });
 }
+// Bâtiment destructible (cartographie "destructible", vue Guerres) : une flamme plutôt que le drapeau
+var DestructibleDefaultColor = "#c98a12";
+function DestructibleMarkerIcon(color) {
+  return L.IconMaterial.icon({
+    icon: "local_fire_department",
+    iconColor: "#fff",
+    markerColor: color || DestructibleDefaultColor,
+    outlineColor: "white",
+    outlineWidth: 0.5,
+    iconSize: [31, 42],
+  });
+}
 // Textes de cartographie en lecture seule (même rendu que la zone de texte
 // de leaflet-geoman utilisée dans l'éditeur)
 var CartographieTextDefaultColor = "#f2f2f2";

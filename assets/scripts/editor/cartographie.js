@@ -6,6 +6,7 @@
  *  - {dimension}-editor-civilisations?ville=ID        : frontières de la ville
  *  - {dimension}-editor-civilisations?quartier=ID     : frontières du quartier
  *  - {dimension}-editor-civilisations?guerre=ID       : zones de conflit d'une guerre en cours
+ *  - {dimension}-editor-civilisations?destructible=ID : bâtiments (marqueurs) et zones destructibles d'une ville
  *
  * Les autres civilisations / villes sont affichées en lecture seule pour le
  * contexte. Les modifications restent locales jusqu'au clic sur "Save".
@@ -32,6 +33,15 @@ const CARTOGRAPHIE_EDITOR_MODES = {
     label: "Zones de conflit",
     shapes: ["Polygon", "Rectangle", "Marker"],
     defaultColor: "#b3263a",
+  },
+  // Ce qu'une guerre RP autorise à détruire dans la ville : un marqueur par bâtiment, un polygone par zone.
+  // Chaque élément est nommé (pas de titre par défaut) pour être reconnaissable sur la fiche de la ville.
+  destructible: {
+    label: "Zones et bâtiments destructibles",
+    shapes: ["Marker", "Polygon", "Rectangle"],
+    defaultColor: "#c98a12",
+    titlePlaceholder: "Nom du bâtiment ou de la zone",
+    removeLabels: { Marker: "le bâtiment", Polygon: "la zone", Rectangle: "la zone" },
   },
 };
 
@@ -82,7 +92,7 @@ function setEditorInfo(text, className = "") {
 
 async function loadCartographieEditorEntity(pathname) {
   const search = parseSearch();
-  const type = ["civilisation", "ville", "quartier", "guerre"].find((key) => search[key]);
+  const type = ["civilisation", "ville", "quartier", "guerre", "destructible"].find((key) => search[key]);
   if (!type) return null;
 
   const typeId = parseInt(search[type]);
@@ -103,6 +113,7 @@ async function loadCartographieEditorEntity(pathname) {
     const infos = await shardApiGet(`/civilisations/quartiers/read/${typeId}`);
     entity = infos.quartier ? { ...infos.quartier, ville: infos.ville } : null;
   } else {
+    // Ville : ses frontières, ou ses bâtiments et zones destructibles
     entity = (await shardApiGet(`/civilisations/villes/id/${typeId}`)).ville;
   }
   if (!entity) throw new Error(`${type} ${typeId} introuvable`);
@@ -145,7 +156,7 @@ function buildCartographieForm(layer, entry) {
     const title = document.createElement("input");
     title.type = "text";
     title.className = "input input-sm";
-    title.placeholder = cartographieEditor.entity.title;
+    title.placeholder = cartographieEditor.mode.titlePlaceholder || cartographieEditor.entity.title;
     addField("Titre", title, "title");
 
     const description = document.createElement("textarea");
@@ -192,7 +203,7 @@ function buildCartographieForm(layer, entry) {
   form.appendChild(colorField);
 
   // Suppression locale, appliquée à l'API au clic sur "Save" (comme la gomme de geoman)
-  const labels = { Marker: "le marqueur", Text: "le texte" };
+  const labels = cartographieEditor.mode.removeLabels || { Marker: "le marqueur", Text: "le texte" };
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "btn btn-sm btn-error rounded-3xl";
@@ -310,7 +321,7 @@ async function setupCartographieEditor(map, pathname) {
 
   if (!data) {
     renderCartographieContext(map, context, new Set());
-    setEditorInfo("Aucune civilisation, ville, quartier ou guerre sélectionné", "badge-warning");
+    setEditorInfo("Aucune civilisation, ville, quartier, guerre ou ville à rendre destructible sélectionnée", "badge-warning");
     return;
   }
 
@@ -376,8 +387,8 @@ async function setupCartographieEditor(map, pathname) {
     e.layer.options.pmIgnore = false;
     L.PM.reInitLayer(e.layer);
     registerCartographieLayer(e.layer, e.shape, {
-      // Frontière de ville ou de quartier : titrée d'après l'entité
-      title: data.type !== "civilisation" ? data.entity.title : "",
+      // Frontière de ville ou de quartier : titrée d'après l'entité ; marqueur et élément destructible : à nommer
+      title: data.type !== "civilisation" && data.type !== "destructible" ? data.entity.title : "",
     });
     if (e.shape === "Text") {
       // En opt-in, geoman n'a pas pu activer la saisie au moment du dessin
@@ -529,7 +540,7 @@ function cartographieEditorBackUrl() {
   const { type, typeId, entity } = cartographieEditor;
   if (type === "guerre") return `${base}/guerre/${typeId}`;
   if (type === "quartier") return `${base}/quartier/${typeId}`;
-  if (type === "ville") return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
+  if (type === "ville" || type === "destructible") return `${base}/civilisation/${entity.civilisation_id}/ville/${typeId}`;
   return `${base}/civilisation/${typeId}`;
 }
 

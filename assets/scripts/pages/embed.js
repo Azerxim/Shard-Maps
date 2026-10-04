@@ -480,7 +480,7 @@ window.createMap = function () {
           case "Rectangle":
           case "Polygon":
           case "Line":
-            L.polygon(JSON.parse(subdata.coords), { color: subdata.color })
+            L.polygon(JSON.parse(subdata.coords), { color: subdata.color, ...subdata.style })
               .addTo(map)
               .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
             break;

@@ -252,7 +252,7 @@ carte affichée. Les liens des popups pointent vers `UI_BASE_URL`.
 | Commerces     | `layers/commerces.js`     | commerces et magasins                                     | Magasins, icône propre pour le siège                                                          |
 | Religions     | `layers/religions.js`     | religions et leur présence                                | Villes à la couleur de la religion majoritaire, répartition dans la popup, gris sans religion |
 | Alliances     | `layers/alliances.js`     | `/alliances/list`                                         | Villes et frontières aux couleurs de l'alliance (militaire en priorité)                       |
-| Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre`                    | Zones rouges pendant la guerre, grises une fois terminée                                      |
+| Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre` et `destructible`, `/civilisations/list` | Zones rouges pendant la guerre, grises une fois terminée ; bâtiments (flamme) et zones (pointillés) destructibles des villes publiques, « Menacé » si la civilisation est engagée dans une guerre en cours |
 
 Le calque Alliances est chargé par `index.html`, `embed.html`, `embedfull.html` et `locate.html`. `editor.html`
 ne charge que le calque Civilisations : l'éditeur ne modifie que ses marqueurs et ses frontières, et les autres
@@ -280,13 +280,16 @@ L'éditeur s'ouvre depuis le site (`openMapEditor` de ShardUI-2) :
 | `ville=ID`        | Frontières             | Polygone, rectangle           | `#3388ff`             |
 | `quartier=ID`     | Frontières du quartier | Polygone, rectangle           | `#f59e0b`             |
 | `guerre=ID`       | Zones de conflit       | Polygone, rectangle, marqueur | `#dc2626`             |
+| `destructible=ID` | Zones et bâtiments destructibles (ID de la ville) | Marqueur (bâtiment), polygone, rectangle (zone) | `#c98a12` |
 
 Les autres civilisations et villes sont affichées en lecture seule. Les modifications restent locales jusqu'au
 bouton d'enregistrement, qui appelle `/cartographie/create`, `/update/{id}` et `/delete/{id}`. Les coordonnées sont
 stockées au format Leaflet `[-z, x]`, en JSON.
 
 Les droits sont vérifiés par Shard-API : Fondateur/Admin de la civilisation (ou administrateur) ; pour une guerre,
-chefs de camp et modérateurs RP d'une guerre en cours.
+chefs de camp et modérateurs RP d'une guerre en cours ; pour les éléments destructibles d'une ville, les modérateurs RP
+en plus des dirigeants de la civilisation. Un élément destructible n'a pas de titre par défaut : il se nomme dans sa
+popup (« Moulin », « Faubourg sud ») pour être reconnaissable sur la fiche de la ville.
 
 ### Connexion
 
