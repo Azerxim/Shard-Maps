@@ -1,20 +1,21 @@
 /* Charte Tetrago : les quatre émaux des bannières du logo
-   (sinople, gueules, azur, or), une encre pour les contours et un os pour les fonds clairs.
+   (sinople, gueules, azur, or), une encre pour les contours et des gris froids teintés d'encre
+   pour les fonds (l'os reste réservé au logo, pour ne pas donner un aspect papier).
    Mêmes valeurs que ShardUI-2/src/App.css. */
 
 :root:has(input.theme-controller[value="light"]:checked),
 [data-theme="light"] {
   color-scheme: light;
-  /* Les quatre émaux sur fond d'os */
+  /* Les quatre émaux sur blanc froid teinté d'encre */
   --color-base-0: #ffffff;
-  --color-base-50: #f7f2ea;
-  --color-base-100: #fbf8f2;
-  --color-base-150: #f4efe6;
-  --color-base-200: #f4efe6;
-  --color-base-250: #efe9dd;
-  --color-base-300: #ece5d8;
-  --color-base-400: #d9cfbe;
-  --color-base-500: #c4b8a3;
+  --color-base-50: #f6f6f9;
+  --color-base-100: #ffffff;
+  --color-base-150: #f3f3f7;
+  --color-base-200: #f0f0f5;
+  --color-base-250: #e9e9f0;
+  --color-base-300: #e3e3eb;
+  --color-base-400: #cdcdd9;
+  --color-base-500: #b2b2c2;
   --color-base-content: #17131f;
   --color-primary: #e3a82b; /* or */
   --color-primary-content: #1f1400;
@@ -23,7 +24,7 @@
   --color-accent: #1f7a55; /* sinople */
   --color-accent-content: #ffffff;
   --color-neutral: #17131f; /* encre */
-  --color-neutral-content: #f1ece3;
+  --color-neutral-content: #f2f1f6;
   --color-info: #2e4fb0;
   --color-info-content: #ffffff;
   --color-success: #1f7a55;
@@ -38,7 +39,7 @@
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
-  --depth: 0;
+  --depth: 1;
   --noise: 0;
 }
 
@@ -55,7 +56,7 @@
   --color-base-300: #17141d;
   --color-base-400: #121017;
   --color-base-500: #0d0b11;
-  --color-base-content: #f1ece3;
+  --color-base-content: #ecebf2;
   --color-primary: #e8b04a; /* or */
   --color-primary-content: #1f1400;
   --color-secondary: #6f8ff0; /* azur */
@@ -63,7 +64,7 @@
   --color-accent: #45b584; /* sinople */
   --color-accent-content: #06170f;
   --color-neutral: #0d0b11; /* encre */
-  --color-neutral-content: #f1ece3;
+  --color-neutral-content: #ecebf2;
   --color-info: #6f8ff0;
   --color-info-content: #0d1230;
   --color-success: #45b584;
@@ -78,7 +79,7 @@
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
-  --depth: 0;
+  --depth: 1;
   --noise: 0;
 }
 
@@ -98,12 +99,18 @@ body {
   font-family: var(--font-sans);
 }
 
+/* La calligraphie Almendra est réservée aux grands titres (h1, logo, font-display) ;
+   les titres de section et de carte restent en Alegreya Sans, plus net à l'écran. */
 h1,
-h2,
-h3,
-.card-title,
 .font-display {
   font-family: var(--font-display);
+  font-weight: 700;
+}
+
+h2,
+h3,
+.card-title {
+  font-family: var(--font-sans);
   font-weight: 700;
 }
 
