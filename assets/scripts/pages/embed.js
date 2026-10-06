@@ -513,6 +513,9 @@ window.createMap = function () {
       }
     }
 
+    // Troupes de la guerre, envoyées par la fiche qui intègre la carte (voir layers/troupes.js)
+    if (pathname.option === "guerres") TroupesGuerre(map);
+
     // map.on('mousemove', function(e) {
     // 	coordControl.update(Math.round(e.latlng.lng), Math.round(-e.latlng.lat));
     // });

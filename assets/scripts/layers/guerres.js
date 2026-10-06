@@ -6,6 +6,9 @@
  * S'y ajoutent les bâtiments (marqueurs à flamme) et zones (contour en pointillés) destructibles des villes
  * publiques (cartographies de type "destructible", tracées avec ?destructible=ID de la ville) : ce qu'une guerre RP
  * autorise à détruire. La popup signale une ville dont la civilisation est engagée dans une guerre en cours.
+ *
+ * Les villes publiques de la dimension sont aussi marquées (capitale ou ville, comme le calque Civilisations), pour
+ * situer fronts, cibles et troupes ; la popup d'une ville engagée nomme ses guerres en cours.
  * UI_BASE_URL est déclarée par shard-api.js.
  */
 
@@ -76,6 +79,25 @@ function destructiblePopup(element, { ville, civilisation }, guerres) {
     </div>`;
 }
 
+function villeGuerrePopup({ ville, civilisation }, guerres) {
+  const enGuerre = guerres.length
+    ? `<div class="flex flex-row gap-2"><span>En guerre:</span><span>${guerres.map((guerre) => `<a href="${UI_BASE_URL}/guerre/${guerre.id}" class="link">${escapeHtml(guerre.title)}</a>`).join(", ")}</span></div>`
+    : "";
+  return `
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-row gap-2">
+        <span>Ville:</span>
+        <b>${escapeHtml(ville.title)}</b>
+      </div>
+      <div class="flex flex-row gap-2">
+        <span>Civilisation:</span>
+        <span>${escapeHtml(civilisation.title)}</span>
+      </div>
+      ${enGuerre}
+      <a href="${UI_BASE_URL}/civilisation/${civilisation.id}/ville/${ville.id}" class="btn btn-secondary btn-sm" style="color: white;">Voir la ville</a>
+    </div>`;
+}
+
 function guerreCampLeader(camp) {
   const leader = (camp || []).find((b) => b.is_leader);
   return leader ? leader.entite.title : "?";
@@ -137,6 +159,21 @@ async function MarkersGuerres(world) {
         tooltip: tooltip,
       });
     }
+  }
+
+  for (const lieu of datas.villes.values()) {
+    const { ville, civilisation } = lieu;
+    if (ville.dimension_id !== datas.dimension.id || ville.x == null || ville.z == null) continue;
+    const guerres = datas.enGuerre.get(civilisation.id) || [];
+    markers.push({
+      type: "Markers",
+      dbid: ville.id,
+      option: "ville",
+      coords: JSON.stringify([-ville.z, ville.x]), // [-z, x]
+      icon: ville.is_capital ? CapitaleIcon : CityIcon,
+      popup: villeGuerrePopup(lieu, guerres),
+      tooltip: `<b class="">${guerres.length ? "⚔ " : ""}${escapeHtml(civilisation.title)} - ${escapeHtml(ville.title)}</b>`,
+    });
   }
 
   for (const element of datas.destructibles) {

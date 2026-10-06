@@ -6,7 +6,7 @@ et [Leaflet](https://leafletjs.com/). Elle affiche les tuiles du monde et, par-d
 contient aussi l'éditeur des marqueurs et frontières, ouvert depuis [ShardUI-2](../ShardUI-2), et le générateur
 hebdomadaire des cartes et des statistiques du monde.
 
-Version actuelle : `2.0.6` (voir `package.json`).
+Version actuelle : `2.0.10` (voir `package.json`).
 
 ## Sommaire
 
@@ -197,7 +197,8 @@ Shard-Maps/
 │       │   ├── commerces.js
 │       │   ├── religions.js
 │       │   ├── alliances.js
-│       │   └── guerres.js
+│       │   ├── guerres.js
+│       │   └── troupes.js         # Troupes d'une guerre, reçues de la fiche qui intègre la carte
 │       ├── pages/                 # Un point d'entrée par page
 │       │   ├── map.js             # Carte complète (index.html)
 │       │   ├── embed.js           # Variantes intégrables
@@ -252,7 +253,17 @@ carte affichée. Les liens des popups pointent vers `UI_BASE_URL`.
 | Commerces     | `layers/commerces.js`     | commerces et magasins, cartographie `commerciale`         | Magasins, icône propre pour le siège ; zones commerciales des villes publiques avec la liste de leurs boutiques (magasins situés à l'intérieur) et leurs jours de marché ; foires à venir (`/marches/list`, icône `festival`) |
 | Religions     | `layers/religions.js`     | religions et leur présence                                | Villes à la couleur de la religion majoritaire, répartition dans la popup, gris sans religion |
 | Alliances     | `layers/alliances.js`     | `/alliances/list`                                         | Villes et frontières aux couleurs de l'alliance (militaire en priorité)                       |
-| Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre` et `destructible`, `/civilisations/list` | Zones rouges pendant la guerre, grises une fois terminée ; bâtiments (flamme) et zones (pointillés) destructibles des villes publiques, « Menacé » si la civilisation est engagée dans une guerre en cours |
+| Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre` et `destructible`, `/civilisations/list` | Zones rouges pendant la guerre, grises une fois terminée ; villes publiques (capitale ou ville, « ⚔ » et guerres en cours dans la popup si la civilisation est engagée) ; bâtiments (flamme) et zones (pointillés) destructibles des villes publiques, « Menacé » si la civilisation est engagée dans une guerre en cours |
+
+**Troupes d'une guerre** (`layers/troupes.js`, cartes intégrées `embed` et `embedfull` du calque Guerres) : les troupes
+ne sont visibles que de leur camp et des modérateurs RP, et la carte n'a pas de session. Elle ne les demande donc pas à
+l'API : elle annonce à la page parente qu'elle est prête (`{ source: "minedmap", type: "embed-ready" }`), et la fiche de
+la guerre (ShardUI-2, `/guerre/:id`) lui répond par `postMessage` avec ce que son visiteur peut voir
+(`{ source: "shardui", type: "guerre-troupes", zones, troupes }`), puis à chaque changement. Aucun jeton ne transite ;
+seul un message de la fenêtre parente, sur une origine autorisée (`UI_BASE_URL`, `UI_ALLOWED_ORIGINS`), est dessiné.
+Sur un champ de bataille, une pastille par camp au centre de la zone (effectif total, liste des troupes) ; en mouvement
+vers une zone, une flèche en pointillés depuis la ville d'origine (point de départ, pointe orientée vers la destination) ; sans destination, une pastille « effectif ? » près
+de la ville. Rouge pour les attaquants, bleu pour les défenseurs.
 
 Le calque Alliances est chargé par `index.html`, `embed.html`, `embedfull.html` et `locate.html`. `editor.html`
 ne charge que le calque Civilisations : l'éditeur ne modifie que ses marqueurs et ses frontières, et les autres
