@@ -24,6 +24,12 @@
       "class": "",
       "hidden": 1
     },
+    "unifier": {
+      "title": "Unifier",
+      "icon": "fa-solid fa-compress-arrows-alt",
+      "class": "",
+      "hidden": 0
+    },
     "civilisations": {
       "title": "Civilisations",
       "icon": "fa-solid fa-city",

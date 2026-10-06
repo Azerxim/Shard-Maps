@@ -358,6 +358,59 @@ async function loadSigns(signLayer) {
   }
 }
 
+// Dessine les polygones et marqueurs d'un calque (layers/*.js) sur la carte ou dans un groupe de calques
+function drawJson(json, target) {
+  let subdata;
+  for (let one in json.polygons) {
+    subdata = json.polygons[one];
+    switch (subdata.type) {
+      case "Circle":
+        L.circle(JSON.parse(subdata.coords)[0], {
+          color: subdata.color,
+          fillColor: subdata.color,
+          fillOpacity: 0.2,
+          radius: JSON.parse(subdata.coords)[1],
+        })
+          .addTo(target)
+          .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
+        break;
+
+      case "Rectangle":
+      case "Polygon":
+      case "Line":
+        L.polygon(JSON.parse(subdata.coords), { color: subdata.color, ...subdata.style })
+          .addTo(target)
+          .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
+        break;
+
+      case "Markers":
+        L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
+          .addTo(target) // [-z, x]
+          .bindTooltip("", { className: "bg-base-100" })
+          .bindPopup(subdata.popup, { className: "customPopup" });
+        break;
+
+      case "Text":
+        CartographieTextMarker(JSON.parse(subdata.coords), subdata.text, subdata.color)
+          .addTo(target) // [-z, x]
+          .bindPopup(subdata.popup, { className: "customPopup" });
+        break;
+    }
+  }
+
+  for (let one in json.markers) {
+    subdata = json.markers[one];
+    switch (subdata.type) {
+      case "Markers":
+        L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
+          .addTo(target) // [-z, x]
+          .bindTooltip(subdata.tooltip, { className: "bg-base-100" })
+          .bindPopup(subdata.popup, { className: "customPopup" });
+        break;
+    }
+  }
+}
+
 window.createMap = function () {
   (async function () {
     const pathname = parsePathName();
@@ -378,6 +431,8 @@ window.createMap = function () {
       params.light = parseInt(args["light"]);
       params.signs = parseInt(args["signs"] ?? "1");
       params.marker = (args["marker"] ?? "").split(",").map((i) => +i);
+      // Vue unifiée : thèmes masqués (civilisations, commerces, guerres)
+      params.masques = decodeURIComponent(args["masques"] ?? "").split(",").filter(Boolean);
 
       if (isNaN(params.zoom)) params.zoom = 0;
       if (isNaN(params.x)) params.x = spawn.x;
@@ -418,7 +473,7 @@ window.createMap = function () {
       overlayMaps["Signs"] = signLayer;
     }
 
-    L.control.layers({}, overlayMaps).addTo(map);
+    const layersControl = L.control.layers({}, overlayMaps).addTo(map);
 
     const coordControl = new CoordControl();
     coordControl.addTo(map);
@@ -434,7 +489,7 @@ window.createMap = function () {
         .bindTooltip('<b class="">Spawn</b>', { className: "bg-base-100" });
     }
 
-    let json, subdata;
+    let json, calques;
     switch (pathname.option) {
       case "civilisations":
         json = await MarkersCivilisations(pathname.data);
@@ -445,7 +500,7 @@ window.createMap = function () {
         break;
 
       case "alliances":
-        // json = await MarkersAlliances(pathname.data);
+        json = await MarkersAlliances(pathname.data);
         break;
 
       case "religions":
@@ -455,62 +510,34 @@ window.createMap = function () {
       case "guerres":
         json = await MarkersGuerres(pathname.data);
         break;
+
+      case "unifier":
+        calques = await MarkersUnifier(pathname.data);
+        break;
     }
 
-    // console.log('json:', json);
+    // Vue unifiée : un calque par thème dans le sélecteur, et la légende des thèmes affichés (layers/unifier.js, ui/legende.js)
+    const themesUnifies = new Map(); // groupe Leaflet -> clé du thème
+    let legende = null;
+    const masquesActuels = () => [...themesUnifies].filter(([groupe]) => !map.hasLayer(groupe)).map(([, cle]) => cle);
+    if (calques) {
+      for (const calque of calques) {
+        const groupe = L.layerGroup();
+        drawJson(calque.json, groupe);
+        themesUnifies.set(groupe, calque.cle);
+        layersControl.addOverlay(groupe, legendeThemeLabel(calque));
+        if (!params.masques.includes(calque.cle)) groupe.addTo(map);
+      }
+      legende = new LegendeControl(calques.map((calque) => ({ ...calque, entrees: legendeEntrees(calque.cle) }))).addTo(map);
+      legende.update(masquesActuels());
+    } else {
+      // Vue d'un seul thème : sa légende (ui/legende.js)
+      legendeVue(pathname.option)?.addTo(map);
+    }
 
     highlightLayerControl();
 
-    if (json) {
-      for (let one in json.polygons) {
-        subdata = json.polygons[one];
-        switch (subdata.type) {
-          case "Circle":
-            L.circle(JSON.parse(subdata.coords)[0], {
-              color: subdata.color,
-              fillColor: subdata.color,
-              fillOpacity: 0.2,
-              radius: JSON.parse(subdata.coords)[1],
-            })
-              .addTo(map)
-              .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
-            break;
-
-          case "Rectangle":
-          case "Polygon":
-          case "Line":
-            L.polygon(JSON.parse(subdata.coords), { color: subdata.color, ...subdata.style })
-              .addTo(map)
-              .bindPopup(withZoneColor(subdata.popup, subdata.color), { className: "customPopup" });
-            break;
-
-          case "Markers":
-            L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
-              .addTo(map) // [-z, x]
-              .bindTooltip("", { className: "bg-base-100" })
-              .bindPopup(subdata.popup, { className: "customPopup" });
-            break;
-
-          case "Text":
-            CartographieTextMarker(JSON.parse(subdata.coords), subdata.text, subdata.color)
-              .addTo(map) // [-z, x]
-              .bindPopup(subdata.popup, { className: "customPopup" });
-            break;
-        }
-      }
-
-      for (let one in json.markers) {
-        subdata = json.markers[one];
-        switch (subdata.type) {
-          case "Markers":
-            L.marker(JSON.parse(subdata.coords), { icon: subdata.icon })
-              .addTo(map) // [-z, x]
-              .bindTooltip(subdata.tooltip, { className: "bg-base-100" })
-              .bindPopup(subdata.popup, { className: "customPopup" });
-            break;
-        }
-      }
-    }
+    if (json) drawJson(json, map);
 
     map.on("mousemove", function (e) {
       coordControl.update(Math.round(e.latlng.lng), Math.round(-e.latlng.lat));
@@ -526,6 +553,8 @@ window.createMap = function () {
       if (params.marker) {
         ret += `&marker=${params.marker[0]},${params.marker[1]}`;
       }
+      const masques = masquesActuels();
+      if (masques.length) ret += "&masques=" + masques.join(",");
 
       return ret;
     };
@@ -537,7 +566,8 @@ window.createMap = function () {
 
     const refreshHash = function (ev) {
       if (ev.type === "layeradd" || ev.type === "layerremove") {
-        if (ev.layer !== lightLayer && ev.layer !== signLayer) return;
+        if (ev.layer !== lightLayer && ev.layer !== signLayer && !themesUnifies.has(ev.layer)) return;
+        if (legende && themesUnifies.has(ev.layer)) legende.update(masquesActuels());
       }
 
       const center = map.getCenter();
@@ -565,6 +595,11 @@ window.createMap = function () {
 
       if (params.light) map.addLayer(lightLayer);
       else map.removeLayer(lightLayer);
+
+      for (const [groupe, cle] of themesUnifies) {
+        if (params.masques.includes(cle)) map.removeLayer(groupe);
+        else map.addLayer(groupe);
+      }
 
       if (features.signs) {
         if (params.signs) map.addLayer(signLayer);

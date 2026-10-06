@@ -113,7 +113,7 @@ Onglets et boutons du menu de la carte (`ui/menu.js`).
 `embedfull.html` et `locate.html` masquent leur menu et ne l'appellent pas, donc `updateOptions()` ignore
 simplement les entrées absentes.
 
-- `options` : `embed`, `embedfull`, `locate`, `editor`, `civilisations`, `commerces`, `alliances`, `religions`,
+- `options` : `embed`, `embedfull`, `locate`, `editor`, `unifier`, `civilisations`, `commerces`, `alliances`, `religions`,
   `guerres`, chacun avec `title`, `icon`, `class` et `hidden` (0 ou 1).
 - `buttons` : liens externes (`about`, `retour` vers le site, carte en temps réel, GitHub) avec `href`, `title`,
   `icon`, `class`, `target`, `hidden`.
@@ -153,8 +153,8 @@ nginx réécrit des adresses courtes vers les pages HTML avec `?data=<carte>` ; 
 | `/about`                        | `about.html`     | À propos                                                                                           |
 | `/assets/...`                   | fichiers         | Scripts et styles revalidés à chaque visite (`no-cache`), autres fichiers en cache 7 jours         |
 
-Le script lit aussi l'adresse lui-même (`parsePathName` de `core/functions.js`) : `<calque>` vaut `civilisations`,
-`commerces`, `alliances`, `religions` ou `guerres` et choisit les données affichées ; la carte par défaut est
+Le script lit aussi l'adresse lui-même (`parsePathName` de `core/functions.js`) : `<calque>` vaut `unifier`,
+`civilisations`, `commerces`, `alliances`, `religions` ou `guerres` et choisit les données affichées ; la carte par défaut est
 `tetrago`.
 
 Paramètres dans l'ancre (`#`), mis à jour pendant la navigation :
@@ -166,6 +166,7 @@ Paramètres dans l'ancre (`#`), mis à jour pendant la navigation :
 | `light=1`    | Calque d'illumination                   |
 | `signs=0`    | Masque les panneaux                     |
 | `marker=x,z` | Ouvre le panneau situé à cette position |
+| `masques=…`  | Vue unifiée : thèmes masqués (`civilisations`, `commerces`, `guerres`, séparés par des virgules) |
 
 ## Organisation du code
 
@@ -198,7 +199,8 @@ Shard-Maps/
 │       │   ├── religions.js
 │       │   ├── alliances.js
 │       │   ├── guerres.js
-│       │   └── troupes.js         # Troupes d'une guerre, reçues de la fiche qui intègre la carte
+│       │   ├── troupes.js         # Troupes d'une guerre, reçues de la fiche qui intègre la carte
+│       │   └── unifier.js         # Vue unifiée : civilisations, commerces et guerres, légende
 │       ├── pages/                 # Un point d'entrée par page
 │       │   ├── map.js             # Carte complète (index.html)
 │       │   ├── embed.js           # Variantes intégrables
@@ -207,6 +209,7 @@ Shard-Maps/
 │       ├── editor/
 │       │   └── cartographie.js    # Édition des formes et enregistrement
 │       └── ui/
+│           ├── legende.js         # Légende des vues de la carte complète
 │           └── menu.js            # Menu, thème clair/sombre, choix de la carte
 ├── scripts/map-generator/
 │   ├── run.sh                     # Lanceur (venv, verrou, journaux)
@@ -254,6 +257,19 @@ carte affichée. Les liens des popups pointent vers `UI_BASE_URL`.
 | Religions     | `layers/religions.js`     | religions et leur présence                                | Villes à la couleur de la religion majoritaire, répartition dans la popup, gris sans religion |
 | Alliances     | `layers/alliances.js`     | `/alliances/list`                                         | Villes et frontières aux couleurs de l'alliance (militaire en priorité)                       |
 | Guerres       | `layers/guerres.js`       | `/guerres/list`, cartographie `guerre` et `destructible`, `/civilisations/list` | Zones rouges pendant la guerre, grises une fois terminée ; villes publiques (capitale ou ville, « ⚔ » et guerres en cours dans la popup si la civilisation est engagée) ; bâtiments (flamme) et zones (pointillés) destructibles des villes publiques, « Menacé » si la civilisation est engagée dans une guerre en cours |
+
+**Légende** (`ui/legende.js`) : chaque vue de la carte complète (`index.html` : Unifier, Civilisations, Commerces,
+Alliances, Religions, Guerres) affiche une légende en haut à droite, sous le sélecteur de calques, repliée par
+défaut (un clic sur « Légende » l'ouvre). Ses symboles sont dessinés à partir des vraies icônes des marqueurs. Les cartes
+intégrées (`embed`, `embedfull`), `locate` et l'éditeur n'en ont pas.
+
+**Vue unifiée** (`layers/unifier.js`, `{dimension}-unifier`, lien « Carte » du site) : les calques Civilisations,
+Commerces et Guerres réunis, chacun dans un calque Leaflet qu'on coche ou décoche dans le sélecteur de calques (les
+villes ne sont pas reprises du calque Guerres, déjà marquées par les civilisations). Une légende (repliée par
+défaut) décrit les symboles des thèmes affichés, à partir des vraies icônes des marqueurs. Les thèmes
+masqués sont gardés dans l'ancre (`&masques=commerces,guerres`) pour partager la vue. Un thème dont le chargement
+échoue n'empêche pas les autres de s'afficher. En carte intégrée (`-embed-unifier`, `-embedfull-unifier`), les trois
+thèmes sont réunis, sans sélecteur ni légende.
 
 **Troupes d'une guerre** (`layers/troupes.js`, cartes intégrées `embed` et `embedfull` du calque Guerres) : les troupes
 ne sont visibles que de leur camp et des modérateurs RP, et la carte n'a pas de session. Elle ne les demande donc pas à

@@ -456,6 +456,13 @@ window.createMap = function () {
       case "guerres":
         json = await MarkersGuerres(pathname.data);
         break;
+
+      case "unifier": {
+        // Carte intégrée : les thèmes de la vue unifiée réunis, sans sélecteur ni légende
+        const calques = await MarkersUnifier(pathname.data);
+        json = { polygons: calques.flatMap((c) => c.json.polygons), markers: calques.flatMap((c) => c.json.markers) };
+        break;
+      }
     }
 
     // console.log('json:', json);

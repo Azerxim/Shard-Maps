@@ -203,14 +203,13 @@ function highlightLayerControl() {
   );
   layer.className += " bg-base-200";
 
-  const checkbox = document.querySelector(
+  // Toutes les cases : la vue unifiée ajoute un calque par thème (civilisations, commerces, guerres)
+  document.querySelectorAll(
     "#map > div.leaflet-control-container > div.leaflet-top.leaflet-right > div > section > div.leaflet-control-layers-overlays > label > span > input"
-  );
-  checkbox.className += " checkbox checkbox-xs";
-  const label = document.querySelector(
+  ).forEach((checkbox) => { checkbox.className += " checkbox checkbox-xs"; });
+  document.querySelectorAll(
     "#map > div.leaflet-control-container > div.leaflet-top.leaflet-right > div > section > div.leaflet-control-layers-overlays > label > span"
-  );
-  label.className += " flex items-center gap-2";
+  ).forEach((label) => { label.className += " flex items-center gap-2"; });
 }
 
 function highlightLayerControlEmbed() {
