@@ -84,7 +84,7 @@ Voir [deploy/NGINX-SETUP.md](deploy/NGINX-SETUP.md) pour le détail des règles 
 Les cartes générées sont définies dans [maps.config.json](scripts/map-generator/maps.config.json) (`tetrago`, `nether`, `nether_toit`, `end` désactivé, dimensions personnalisées en option).
 
 ```bash
-cp .env.example .env         # renseigner MINESTRATOR_API_KEY, MINESTRATOR_SERVER_ID, MINESTRATOR_SFTP_PASSWORD
+cp .env.example .env         # renseigner MINESTRATOR_API_KEY et MINESTRATOR_SERVER_ID (identifiant numérique)
 npm run maps:generate        # exécution manuelle (crée .venv et récupère MinedMap au premier lancement)
 npm run maps:generate:local  # regénérer depuis la copie locale, sans téléchargement
 npm run maps:cron:install    # tâche cron hebdomadaire (lundi 4h00)

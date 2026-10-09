@@ -85,7 +85,7 @@ mode développement.
 | `UI_BASE_URL`                                      | ShardUI-2 : liens des popups et origine autorisée à transmettre le jeton à l'éditeur                              |
 | `UI_ALLOWED_ORIGINS`                               | Autres origines autorisées pour le jeton, séparées par des virgules                                               |
 | `MINESTRATOR_API_KEY`, `MINESTRATOR_SERVER_ID`     | API Minestrator (accès SFTP, `save-off` / `save-on`)                                                              |
-| `MINESTRATOR_SFTP_PASSWORD`                        | Mot de passe SFTP (obligatoire, non fourni par l'API)                                                             |
+| `MINESTRATOR_SFTP_PASSWORD`                        | Mot de passe SFTP, si l'API ne le fournit pas (sinon celui de l'API est utilisé)                                  |
 | `MINESTRATOR_SFTP_HOST`, `_PORT`, `_USER`, `_ROOT` | Accès SFTP explicites (facultatif)                                                                                |
 | `MAP_LOCAL_WORLD`                                  | Sauvegarde locale à utiliser au lieu du SFTP (équivaut à `--local-world`)                                         |
 | `MAP_WORLD_NAME`                                   | Dossier du monde (défaut : `level-name` de `server.properties`)                                                   |
@@ -99,7 +99,7 @@ mode développement.
 | `MAP_STATS_ACTIVE_HOURS`, `MAP_STATS_ACTIVE_DAYS`  | Joueur actif : temps de jeu minimal et connexion récente (1 h, 30 jours)                                          |
 | `MAP_STATS_TILE`, `MAP_STATS_TOP_ZONES`            | Côté des zones en blocs et nombre de zones gardées (256, 25)                                                      |
 | `MAP_STATS_RADIUS`, `MAP_STATS_QUARTIER_RADIUS`    | Rayon mesuré sans frontières tracées (128, 64 blocs)                                                              |
-| `MINEDMAP_BIN`, `MINEDMAP_NETHER_BIN`              | Chemins des binaires MinedMap (défaut : ceux installés par `run.sh`)                                              |
+| `MINEDMAP_BIN`, `MINEDMAP_NETHER_BIN`              | Binaires MinedMap (défaut : ceux de `run.sh`) ; chemin relatif depuis `Shard-Maps`, rendu exécutable au besoin ; 2.8+ pour Minecraft 26.x |
 
 `assets/scripts/core/env.js` est **généré** à partir de ces variables et chargé avant `shard-api.js`. Il n'est pas
 versionné : après un changement de `.env`, relancer `deploy/start-nginx-local.sh`.
@@ -384,9 +384,17 @@ Options (après `--`) :
 
 1. **Récupération** : l'API Minestrator ne permet pas de télécharger les sauvegardes. Le monde est copié par SFTP
    (`level.dat` et dossiers `region`, fichiers modifiés seulement), entre `save-off` / `save-all flush` et
-   `save-on` envoyés par l'API. Avec `--local-world`, les fichiers sont repris par lien matériel quand c'est
-   possible, sans modifier la sauvegarde.
-2. **Génération** : incrémentale dans `work/output` ; seules les régions modifiées sont redessinées.
+   `save-on` envoyés par l'API ; serveur arrêté, la copie se fait sans ces commandes. Avec `--local-world`, les
+   fichiers sont repris par lien matériel quand c'est possible, sans modifier la sauvegarde.
+   - **Minecraft 26.x** : les dimensions sont rangées sous `dimensions/minecraft/<overworld|the_nether|the_end>` et
+     les joueurs sous `players/data` et `players/stats`. La copie de travail garde la disposition classique
+     (`region`, `DIM-1`, `playerdata`, `stats`) lue par MinedMap et le relevé, et `level.dat` y est complété de
+     `SpawnX/Y/Z` (tirés de `spawn.pos`), que MinedMap 2.2 exige.
+   - **Nouveau monde** (nouvelle saison) : si le monde diffère de celui de la copie de travail (`work/.monde`),
+     l'ancienne copie et ses cartes intermédiaires sont déplacées dans `work/archives/` au lieu d'être écrasées,
+     et la génération repart de zéro (sans reprendre les tuiles publiées de l'ancien monde).
+2. **Génération** : incrémentale dans `work/output` ; seules les régions modifiées sont redessinées. Une dimension
+   sans aucune région (pas encore explorée) est ignorée, sans erreur.
 3. **Publication** : chaque carte réussie est copiée dans `assets/data/<nom>` et `maps.json` est mis à jour sans
    perdre les entrées existantes. Une carte en erreur garde ses anciennes tuiles.
 4. **Statistiques** : relevé du monde et envoi à Shard-API.

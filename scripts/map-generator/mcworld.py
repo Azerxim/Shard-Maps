@@ -299,7 +299,7 @@ DEPLACEMENTS = ("minecraft:walk_one_cm", "minecraft:sprint_one_cm", "minecraft:c
 
 
 def _statistiques_joueur(racine, uuid):
-    chemin = os.path.join(racine, "stats", f"{uuid}.json")
+    chemin = os.path.join(dossier_joueurs(racine, "stats"), f"{uuid}.json")
     if not os.path.exists(chemin):
         return {}
     try:
@@ -330,7 +330,7 @@ def lire_joueurs(racine, noms=None):
     """Un dictionnaire par joueur : position, lit, temps de jeu et statistiques."""
     noms = noms or {}
     joueurs = []
-    for chemin in sorted(glob.glob(os.path.join(racine, "playerdata", "*.dat"))):
+    for chemin in sorted(glob.glob(os.path.join(dossier_joueurs(racine, "playerdata"), "*.dat"))):
         uuid = os.path.splitext(os.path.basename(chemin))[0]
         try:
             donnees = lire_fichier_nbt(chemin)
@@ -375,6 +375,22 @@ def lire_noms_joueurs(*dossiers):
     return noms
 
 
+# Minecraft 26.x : dimensions sous dimensions/minecraft/, joueurs sous players/ (voir generate_maps.DIMENSIONS_26)
+DIMENSIONS_26 = {"": "dimensions/minecraft/overworld", "DIM-1": "dimensions/minecraft/the_nether", "DIM1": "dimensions/minecraft/the_end"}
+JOUEURS_26 = {"playerdata": "players/data", "stats": "players/stats"}
+
+
 def dossier_dimension(racine, source):
-    """Dossier d'une dimension : "" (overworld), "DIM-1", "dimensions/namespace/nom"."""
-    return os.path.join(racine, source) if source else racine
+    """Dossier d'une dimension : "" (overworld), "DIM-1", "dimensions/namespace/nom" ; disposition 26.x reconnue."""
+    classique = os.path.join(racine, source) if source else racine
+    moderne = os.path.join(racine, DIMENSIONS_26[source]) if source in DIMENSIONS_26 else None
+    if moderne and not os.path.isdir(os.path.join(classique, "region")) and os.path.isdir(moderne):
+        return moderne
+    return classique
+
+
+def dossier_joueurs(racine, nom):
+    """playerdata ou stats du monde : disposition classique, sinon players/data et players/stats (26.x)."""
+    classique = os.path.join(racine, nom)
+    moderne = os.path.join(racine, JOUEURS_26[nom])
+    return moderne if not os.path.isdir(classique) and os.path.isdir(moderne) else classique

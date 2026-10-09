@@ -9,7 +9,10 @@ Adapté de MinedMap Viewer Generator (https://github.com/Azerxim/MinedMap-Viewer
 - maps.json est mis à jour sans écraser les entrées existantes ;
 - une carte en erreur garde ses anciennes tuiles, les autres sont quand même publiées ;
 - les statistiques du monde (présence, population, joueurs) sont relevées puis envoyées à Shard-API
-  (world_stats.py, désactivable avec --no-stats).
+  (world_stats.py, désactivable avec --no-stats) ;
+- mondes Minecraft 26.x (dimensions/minecraft/<dimension>, players/) : copiés dans la disposition classique
+  (region, DIM-1, playerdata) que MinedMap et world_stats lisent, et level.dat complété de SpawnX/Y/Z ;
+- quand le monde change (nouvelle saison), l'ancienne copie de travail est archivée dans work/archives.
 
 Lancer via run.sh (environnement virtuel, verrou, logs).
 """
@@ -20,13 +23,16 @@ import os
 import posixpath
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 # Le relevé du monde vit à côté de ce fichier : importable même si le script est chargé par son chemin
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mcworld
 import world_stats
 
 try:
@@ -47,12 +53,31 @@ CONFIG_PATH = os.path.join(SCRIPT_DIR, "maps.config.json")
 STATS_DIMENSION_DIRS = ("entities",)
 STATS_WORLD_DIRS = ("playerdata", "stats")
 
+# Minecraft 26.x : chaque dimension sous dimensions/minecraft/, les joueurs sous players/.
+# La copie de travail garde la disposition classique (clé), lue par MinedMap et world_stats.
+DIMENSIONS_26 = {"": "dimensions/minecraft/overworld", "DIM-1": "dimensions/minecraft/the_nether", "DIM1": "dimensions/minecraft/the_end"}
+JOUEURS_26 = {"playerdata": "players/data", "stats": "players/stats"}
+MARQUEUR_MONDE = os.path.join(WORK_DIR, ".monde")  # nom du monde de la copie de travail
+ARCHIVES_DIR = os.path.join(WORK_DIR, "archives")
+
 MINESTRATOR_API = "https://mine.sttr.io"
 MMVG_DIR = os.path.join(CACHE_DIR, "MinedMap-Viewer-Generator", "MinedMap")
+
+
+def chemin_binaire(variable, defaut):
+    """Binaire donné par l'environnement (chemin relatif : depuis le dossier Shard-Maps, comme le .env), sinon défaut."""
+    valeur = (os.environ.get(variable) or "").strip()
+    if not valeur:
+        return defaut
+    valeur = os.path.expanduser(valeur)
+    return valeur if os.path.isabs(valeur) else os.path.join(MAPS_DIR, valeur)
+
+
 GENERATORS = {
-    "minedmap": os.environ.get("MINEDMAP_BIN") or os.path.join(MMVG_DIR, "MinedMap-2.2.0"),
+    # MINEDMAP_BIN : version récente de MinedMap (2.8+ lit les mondes Minecraft 26.x)
+    "minedmap": chemin_binaire("MINEDMAP_BIN", os.path.join(MMVG_DIR, "MinedMap-2.2.0")),
     # Ancien MinedMap 1.19 : seul à rendre la surface du Nether (sous le toit de bedrock)
-    "legacy_nether": os.environ.get("MINEDMAP_NETHER_BIN") or os.path.join(MMVG_DIR, "1.19", "Nether"),
+    "legacy_nether": chemin_binaire("MINEDMAP_NETHER_BIN", os.path.join(MMVG_DIR, "1.19", "Nether")),
 }
 
 
@@ -78,8 +103,17 @@ def api_request(method, path, body=None):
         data=json.dumps(body).encode() if body is not None else None,
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "application/json"},
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read() or b"{}")
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read() or b"{}")
+    except urllib.error.HTTPError as error:
+        # L'API précise l'erreur dans son corps : {"api": {"description", "error", …}}
+        try:
+            api = json.loads(error.read() or b"{}").get("api", {})
+        except ValueError:
+            api = {}
+        detail = " / ".join(str(v) for v in (api.get("description"), api.get("error")) if v)
+        raise RuntimeError(f"API Minestrator {method} {path} : HTTP {error.code}" + (f" ({detail})" if detail else "")) from None
 
 
 def find_key(data, key):
@@ -104,6 +138,13 @@ def send_command(server_id, command):
     log("API", f"Commande envoyée : {command}")
 
 
+def check_server_id(server_id):
+    # L'API attend l'identifiant numérique du serveur, pas le code affiché dans MineBoard (ex. DQ65V) :
+    # avec un code, elle répond 400 API_MISSING_REQUIRED_FIELDS
+    if server_id and not str(server_id).strip().isdigit():
+        raise RuntimeError(f"MINESTRATOR_SERVER_ID doit être l'identifiant numérique du serveur (reçu : {server_id!r})")
+
+
 def sftp_credentials(server_id):
     creds = {
         "host": os.environ.get("MINESTRATOR_SFTP_HOST"),
@@ -114,11 +155,13 @@ def sftp_credentials(server_id):
     if not (creds["host"] and creds["port"] and creds["user"]):
         if not server_id:
             raise RuntimeError("Définir MINESTRATOR_SERVER_ID ou MINESTRATOR_SFTP_HOST/PORT/USER")
+        check_server_id(server_id)
         sftp = find_key(api_request("GET", f"/server/{server_id}"), "sftp") or {}
         for key in ("host", "port", "user"):
             creds[key] = creds[key] or sftp.get(key)
-        # L'API renvoie un mot de passe vide : il doit venir de l'environnement
-        creds["password"] = creds["password"] or sftp.get("password")
+        # Mot de passe SFTP renvoyé par l'API en priorité (celui du compte MineBoard est refusé par le SFTP) ;
+        # MINESTRATOR_SFTP_PASSWORD seulement si l'API n'en donne pas
+        creds["password"] = sftp.get("password") or creds["password"]
     if not creds["password"]:
         raise RuntimeError("MINESTRATOR_SFTP_PASSWORD n'est pas défini")
     if not (creds["host"] and creds["port"] and creds["user"]):
@@ -210,6 +253,8 @@ def discover_custom_dimensions(sftp, remote_world):
     for namespace in sftp.listdir_attr(base):
         if not stat.S_ISDIR(namespace.st_mode):
             continue
+        if namespace.filename == "minecraft":  # dimensions vanilla en 26.x (déjà dans maps.config.json)
+            continue
         for dimension in sftp.listdir_attr(posixpath.join(base, namespace.filename)):
             relative = f"dimensions/{namespace.filename}/{dimension.filename}"
             if stat.S_ISDIR(dimension.st_mode) and remote_exists(sftp, posixpath.join(remote_world, relative, "region")):
@@ -217,10 +262,84 @@ def discover_custom_dimensions(sftp, remote_world):
     return found
 
 
+def disposition_26(exists, world):
+    """Vrai si le monde range ses dimensions sous dimensions/minecraft/ (Minecraft 26.x)."""
+    return exists(f"{world}/{DIMENSIONS_26['']}/region") or exists(f"{world}/{DIMENSIONS_26['']}/level.dat")
+
+
+def chemin_source(source, monde_26):
+    """Dossier d'une dimension dans le monde d'origine (source : clé de la disposition classique)."""
+    return DIMENSIONS_26.get(source, source) if monde_26 else source
+
+
+def completer_level_dat(path):
+    """Minecraft 26.x range le point d'apparition dans Data.spawn.pos, MinedMap 2.2 exige Data.SpawnX/Y/Z :
+    ajoute ces trois entiers en tête de Data, sans rien retirer. Sans effet sur un level.dat classique."""
+    import gzip
+    with gzip.open(path) as f:
+        brut = f.read()
+    entete = b"\x0a\x00\x00\x0a\x00\x04Data"
+    donnees = mcworld.lire_nbt(brut).get("Data", {})
+    position = (donnees.get("spawn") or {}).get("pos")
+    if not brut.startswith(entete) or "SpawnX" in donnees or not (isinstance(position, (list, tuple)) and len(position) >= 3):
+        return
+    ajout = b"".join(b"\x03" + struct.pack(">H", len(nom)) + nom.encode() + struct.pack(">i", int(valeur))
+                     for nom, valeur in zip(("SpawnX", "SpawnY", "SpawnZ"), position))
+    tmp = f"{path}.tmp"
+    # Nouveau fichier puis remplacement : une sauvegarde liée en dur (--local-world) n'est jamais modifiée
+    with gzip.open(tmp, "wb") as f:
+        f.write(entete + ajout + brut[len(entete):])
+    shutil.copystat(path, tmp)
+    os.replace(tmp, path)
+    log("WORLD", f"level.dat complété pour MinedMap (point d'apparition {position[0]}, {position[1]}, {position[2]})")
+
+
+def preparer_copie(nom_monde):
+    """Monde différent de la copie de travail (nouvelle saison) : l'ancienne copie et ses cartes intermédiaires sont
+    archivées dans work/archives au lieu d'être écrasées. Renvoie True si la copie repart de zéro."""
+    ancien = None
+    if os.path.exists(MARQUEUR_MONDE):
+        with open(MARQUEUR_MONDE, encoding="utf-8") as f:
+            ancien = f.read().strip()
+    contenu = [nom for nom in ("world", "output", "usercache.json") if os.path.exists(os.path.join(WORK_DIR, nom))]
+    nouveau = ancien != nom_monde and bool(contenu)
+    if nouveau:
+        cible = os.path.join(ARCHIVES_DIR, f"{ancien or 'monde-precedent'}_{dt.datetime.now():%Y-%m-%d_%H%M%S}")
+        os.makedirs(cible, exist_ok=True)
+        for nom in contenu:
+            shutil.move(os.path.join(WORK_DIR, nom), os.path.join(cible, nom))
+        log("WORLD", f"Monde « {nom_monde} » différent de la copie de travail ({ancien or 'nom inconnu'}) : "
+                     f"ancienne copie archivée dans {os.path.relpath(cible, MAPS_DIR)}")
+    os.makedirs(WORK_DIR, exist_ok=True)
+    with open(MARQUEUR_MONDE, "w", encoding="utf-8") as f:
+        f.write(nom_monde)
+    return nouveau
+
+
+def suspendre_sauvegardes(server_id):
+    """save-off puis save-all flush ; False si le serveur est arrêté (rien n'écrit dans le monde : copie telle quelle)."""
+    try:
+        send_command(server_id, "save-off")
+    except RuntimeError as error:
+        if "stopped" in str(error).lower():
+            log("API", "Serveur arrêté : monde copié tel quel, sans save-off / save-on")
+            return False
+        raise
+    try:
+        send_command(server_id, "save-all flush")
+        time.sleep(int(os.environ.get("MAP_SAVE_WAIT", "20")))
+    except BaseException:
+        send_command(server_id, "save-on")
+        raise
+    return True
+
+
 def download_world(sources, avec_stats=False):
     server_id = os.environ.get("MINESTRATOR_SERVER_ID")
     creds = sftp_credentials(server_id)
     use_save_commands = server_id and env_flag("MAP_SAVE_COMMANDS", True)
+    if use_save_commands:
+        check_server_id(server_id)
 
     client, sftp = connect_sftp(creds)
     log("SFTP", f"Connecté à {creds['host']}:{creds['port']}")
@@ -231,20 +350,24 @@ def download_world(sources, avec_stats=False):
         if not remote_exists(sftp, posixpath.join(remote_world, "level.dat")):
             raise RuntimeError(f"level.dat introuvable dans {remote_world}")
         log("SFTP", f"Monde : {remote_world}")
+        monde_26 = disposition_26(lambda path: remote_exists(sftp, path), remote_world)
+        if monde_26:
+            log("SFTP", "Disposition Minecraft 26.x (dimensions/minecraft/, players/)")
+        nouveau_monde = preparer_copie(posixpath.basename(remote_world))
 
-        if use_save_commands:
-            # Suspendre l'écriture des régions pendant la copie pour avoir des fichiers cohérents
-            send_command(server_id, "save-off")
-            send_command(server_id, "save-all flush")
-            time.sleep(int(os.environ.get("MAP_SAVE_WAIT", "20")))
+        # Sauvegarde automatique suspendue : save-on sera renvoyé quoi qu'il arrive ensuite
+        sauvegardes_suspendues = False
         try:
+            if use_save_commands:
+                # Suspendre l'écriture des régions pendant la copie pour avoir des fichiers cohérents
+                sauvegardes_suspendues = suspendre_sauvegardes(server_id)
             os.makedirs(WORLD_DIR, exist_ok=True)
             sync_file(sftp, posixpath.join(remote_world, "level.dat"), os.path.join(WORLD_DIR, "level.dat"),
                       sftp.stat(posixpath.join(remote_world, "level.dat")), stats)
             dossiers = ("region",) + (STATS_DIMENSION_DIRS if avec_stats else ())
             for source in sources:
                 for dossier in dossiers:
-                    remote_dir = posixpath.join(remote_world, source, dossier) if source else posixpath.join(remote_world, dossier)
+                    remote_dir = posixpath.join(remote_world, chemin_source(source, monde_26), dossier)
                     local_dir = os.path.join(WORLD_DIR, source, dossier)
                     if remote_exists(sftp, remote_dir):
                         log("SFTP", f"Synchronisation de {source or '.'}/{dossier}")
@@ -254,7 +377,7 @@ def download_world(sources, avec_stats=False):
             if avec_stats:
                 # Joueurs (positions, lits, temps de jeu) et pseudos, pour les statistiques
                 for dossier in STATS_WORLD_DIRS:
-                    remote_dir = posixpath.join(remote_world, dossier)
+                    remote_dir = posixpath.join(remote_world, JOUEURS_26[dossier] if monde_26 else dossier)
                     if remote_exists(sftp, remote_dir):
                         log("SFTP", f"Synchronisation de {dossier}")
                         mirror_dir(sftp, remote_dir, os.path.join(WORLD_DIR, dossier), stats)
@@ -262,7 +385,7 @@ def download_world(sources, avec_stats=False):
                 if remote_exists(sftp, usercache):
                     sync_file(sftp, usercache, os.path.join(WORK_DIR, "usercache.json"), sftp.stat(usercache), stats)
         finally:
-            if use_save_commands:
+            if sauvegardes_suspendues:
                 send_command(server_id, "save-on")
     finally:
         sftp.close()
@@ -270,6 +393,8 @@ def download_world(sources, avec_stats=False):
 
     log("SFTP", f"{stats['downloaded']} fichier(s) téléchargé(s) ({stats['bytes'] / 1048576:.1f} Mo), "
                 f"{stats['skipped']} inchangé(s), {stats['deleted']} supprimé(s)")
+    completer_level_dat(os.path.join(WORLD_DIR, "level.dat"))
+    return nouveau_monde
 
 
 # ---------------------------------------------------------------------------
@@ -340,11 +465,15 @@ def copy_local_world(root, sources):
     Sur un serveur en cours d'exécution, préférer une sauvegarde arrêtée : les régions peuvent être incomplètes.
     """
     stats = {"copied": 0, "skipped": 0, "deleted": 0, "bytes": 0}
-    os.makedirs(WORLD_DIR, exist_ok=True)
     log("LOCAL", f"Monde : {root}")
+    monde_26 = disposition_26(os.path.exists, root)
+    if monde_26:
+        log("LOCAL", "Disposition Minecraft 26.x (dimensions/minecraft/, players/)")
+    nouveau_monde = preparer_copie(mcworld.infos_monde(root)["nom"])
+    os.makedirs(WORLD_DIR, exist_ok=True)
     link_or_copy(os.path.join(root, "level.dat"), os.path.join(WORLD_DIR, "level.dat"), stats)
     for source in sources:
-        region = os.path.join(root, source, "region")
+        region = os.path.join(root, chemin_source(source, monde_26), "region")
         if os.path.isdir(region):
             log("LOCAL", f"Reprise de {source or '.'}/region")
             mirror_local_dir(region, os.path.join(WORLD_DIR, source, "region"), stats)
@@ -352,6 +481,8 @@ def copy_local_world(root, sources):
             log("WARN", f"{source or '.'}/region absent de la sauvegarde")
     log("LOCAL", f"{stats['copied']} fichier(s) repris ({stats['bytes'] / 1048576:.1f} Mo), "
                  f"{stats['skipped']} inchangé(s), {stats['deleted']} supprimé(s)")
+    completer_level_dat(os.path.join(WORLD_DIR, "level.dat"))
+    return nouveau_monde
 
 
 def discover_local_dimensions(root):
@@ -360,7 +491,7 @@ def discover_local_dimensions(root):
     if not os.path.isdir(base):
         return []
     return [f"dimensions/{namespace}/{name}"
-            for namespace in sorted(os.listdir(base)) if os.path.isdir(os.path.join(base, namespace))
+            for namespace in sorted(os.listdir(base)) if os.path.isdir(os.path.join(base, namespace)) and namespace != "minecraft"
             for name in sorted(os.listdir(os.path.join(base, namespace)))
             if os.path.isdir(os.path.join(base, namespace, name, "region"))]
 
@@ -382,7 +513,7 @@ def build_map_list(config, custom_dimensions):
     return maps
 
 
-def generate_map(entry):
+def generate_map(entry, depuis_publie=True):
     name = entry["name"]
     source = os.path.join(WORLD_DIR, entry.get("source", ""))
     output = os.path.join(OUTPUT_DIR, name)
@@ -390,6 +521,10 @@ def generate_map(entry):
 
     if not os.path.isdir(os.path.join(source, "region")):
         raise RuntimeError(f"pas de dossier region dans {source}")
+    if os.path.isfile(binary) and not os.access(binary, os.X_OK):
+        # Binaire téléchargé à la main (MINEDMAP_BIN) : droit d'exécution souvent absent
+        os.chmod(binary, os.stat(binary).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        log("GEN", f"droit d'exécution ajouté à {binary}")
     if not os.access(binary, os.X_OK):
         raise RuntimeError(f"binaire introuvable ou non exécutable : {binary}")
 
@@ -399,7 +534,7 @@ def generate_map(entry):
 
     # Première exécution : repartir des données publiées pour profiter de l'incrémental
     published = os.path.join(DATA_DIR, name)
-    if not os.path.isdir(output) and os.path.isdir(published):
+    if depuis_publie and not os.path.isdir(output) and os.path.isdir(published):
         log("GEN", f"{name} : initialisation depuis assets/data/{name}")
         shutil.copytree(published, output)
     os.makedirs(output, exist_ok=True)
@@ -500,15 +635,17 @@ def main():
 
     avec_stats = env_flag("MAP_STATS", True) and not args.no_stats
     sources = sorted({m.get("source", "") for m in maps})
+    # Nouveau monde : les cartes publiées sont celles de l'ancien, la génération repart de zéro
+    nouveau_monde = False
     if args.skip_download:
         log("WORLD", "Copie déjà présente dans work/world réutilisée")
     elif local_root and args.stats_only:
         # Le relevé lit la sauvegarde directement : rien à recopier
         log("LOCAL", f"Monde : {local_root}")
     elif local_root:
-        copy_local_world(local_root, sources)
+        nouveau_monde = copy_local_world(local_root, sources)
     else:
-        download_world(sources, avec_stats=avec_stats)
+        nouveau_monde = download_world(sources, avec_stats=avec_stats)
 
     # La sauvegarde locale est lue telle quelle : seules les régions sont recopiées pour MinedMap
     stats_root = local_root or WORLD_DIR
@@ -523,8 +660,13 @@ def main():
 
     generated, failed = [], []
     for entry in maps:
+        # Dimension pas encore explorée (ex. Nether d'une nouvelle saison) : rien à générer, ce n'est pas une erreur ;
+        # la carte publiée, s'il y en a une, reste en place
+        if not os.path.isdir(os.path.join(WORLD_DIR, entry.get("source", ""), "region")):
+            log("WARN", f"{entry['name']} : aucune région dans {entry.get('source') or 'overworld'}, carte ignorée")
+            continue
         try:
-            generate_map(entry)
+            generate_map(entry, depuis_publie=not nouveau_monde)
             if not args.no_publish:
                 publish_map(entry["name"])
             generated.append(entry)

@@ -376,9 +376,9 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
                      f"{totaux['moities'] // MOITIES_PAR_LIT} lits, "
                      f"{totaux['villageois']} villageois")
 
-    if not os.path.isdir(os.path.join(racine, "playerdata")):
+    if not os.path.isdir(mcworld.dossier_joueurs(racine, "playerdata")):
         log("WARN", "playerdata absent : aucun joueur relevé")
-    elif not os.path.isdir(os.path.join(racine, "stats")):
+    elif not os.path.isdir(mcworld.dossier_joueurs(racine, "stats")):
         log("WARN", "stats absent : temps de jeu, morts et distances des joueurs non relevés")
     noms = mcworld.lire_noms_joueurs(racine_serveur, os.path.dirname(racine.rstrip(os.sep)), racine)
     if not noms:
