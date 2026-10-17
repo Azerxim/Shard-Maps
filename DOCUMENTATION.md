@@ -153,6 +153,10 @@ nginx réécrit des adresses courtes vers les pages HTML avec `?data=<carte>` ; 
 | `/about`                        | `about.html`     | À propos                                                                                           |
 | `/assets/...`                   | fichiers         | Scripts et styles revalidés à chaque visite (`no-cache`), autres fichiers en cache 7 jours         |
 
+Hors de ces adresses, nginx ne sert que `options.json`, `package.json` et les pages `.html` de la racine : le reste
+du dossier (`.env`, `.git`, `scripts/`, `logs/`) répond 404. Voir la liste blanche dans
+[deploy/NGINX-SETUP.md](deploy/NGINX-SETUP.md#règles-de-réécriture).
+
 Le script lit aussi l'adresse lui-même (`parsePathName` de `core/functions.js`) : `<calque>` vaut `unifier`,
 `civilisations`, `commerces`, `alliances`, `religions` ou `guerres` et choisit les données affichées ; la carte par défaut est
 `tetrago`.

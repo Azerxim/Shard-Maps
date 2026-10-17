@@ -59,9 +59,18 @@ comporter jusqu'à trois segments séparés par `_`. `<calque>` est un onglet de
 | `/<nom>-editor-<calque>`    | `editor.html?data=<nom>`              |
 | `/about`                    | `about.html`                          |
 | `/assets/...`               | Fichiers statiques, servis tels quels |
+| `/options.json`             | Servi tel quel                        |
+| `/package.json`             | Servi tel quel                        |
+| `/<page>.html`              | Servie telle quelle                   |
+| Toute autre adresse         | 404                                   |
 
-Le calque n'est pas transmis en paramètre : la page le lit dans son URL. Toute autre adresse tombe sur la page
-d'accueil ou une 404 selon la règle qui correspond.
+Le calque n'est pas transmis en paramètre : la page le lit dans son URL.
+
+**Liste blanche** : nginx sert le dossier du projet, qui contient aussi `.env` (clés Minestrator, mot de passe
+SFTP, clé du générateur), `.git`, `scripts/` et `logs/`. Seuls `/assets/`, les pages `.html` de la racine,
+`options.json` et `package.json` (version affichée par les pages) sont donc servis ; toute autre adresse répond 404.
+Un nouveau fichier lu par les pages doit aller dans `assets/` ou être ajouté à cette liste dans
+[nginx.conf](nginx.conf).
 
 `/assets/` est traité avant les règles de cartes, donc jamais pris pour un nom de monde. Les fichiers y sont
 mis en cache 7 jours, sauf les `.js` et `.css` qui sont toujours revalidés (`Cache-Control: no-cache`) : ils ne
