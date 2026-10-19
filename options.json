@@ -71,7 +71,7 @@
       "hidden": 0
     },
     "retour": {
-      "href": "https://beta.tetrago.fr",
+      "href": "https://tetrago.fr",
       "title": "Role Play",
       "icon": "fa-solid fa-home",
       "class": "",
@@ -79,7 +79,7 @@
       "hidden": 0
     },
     "livemap": {
-      "href": "https://map.beta.tetrago.fr",
+      "href": "https://live.map.tetrago.fr",
       "title": "Carte en temps réel",
       "icon": "fa-solid fa-map",
       "class": "",
