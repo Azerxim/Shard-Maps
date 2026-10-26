@@ -504,7 +504,7 @@ Erreurs d'envoi fréquentes : clé absente (`MAP_STATS_API_KEY` vide) ou refusé
 npm run pm2:start       # pm2 lance npm run start (nginx sur le port 3005)
 ```
 
-La carte publique (`map.beta.tetrago.fr`) doit être relayée vers ce port par le serveur web frontal.
+La carte publique (`map.tetrago.fr`) doit être relayée vers ce port par le serveur web frontal.
 
 ### Installation système
 
