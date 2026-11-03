@@ -9,7 +9,7 @@ Adapté de MinedMap Viewer Generator (https://github.com/Azerxim/MinedMap-Viewer
 - maps.json est mis à jour sans écraser les entrées existantes ;
 - une carte en erreur garde ses anciennes tuiles, les autres sont quand même publiées ;
 - les statistiques du monde (présence, population, joueurs) sont relevées puis envoyées à Shard-API
-  (world_stats.py, désactivable avec --no-stats) ;
+  (world_stats.py, désactivable avec --no-stats, ignoré quand Shard-API ne répond pas) ;
 - mondes Minecraft 26.x (dimensions/minecraft/<dimension>, players/) : copiés dans la disposition classique
   (region, DIM-1, playerdata) que MinedMap et world_stats lisent, et level.dat complété de SpawnX/Y/Z ;
 - quand le monde change (nouvelle saison), l'ancienne copie de travail est archivée dans work/archives.
@@ -591,6 +591,21 @@ def collect_stats(world_root, maps, server_root=None, envoi=True):
     world_stats.relever(world_root, sources, maps, api_url, cle, racine_serveur=server_root, envoi=envoi)
 
 
+def shard_api_joignable():
+    """Shard-API répond-elle ? Une erreur HTTP compte comme une réponse ; sans URL, rien à vérifier."""
+    api_url = os.environ.get("SHARD_API_BASE_URL", "").strip()
+    if not api_url:
+        return True
+    try:
+        with urllib.request.urlopen(api_url, timeout=15):
+            return True
+    except urllib.error.HTTPError:
+        return True
+    except (urllib.error.URLError, OSError) as error:
+        log("WARN", f"Shard-API injoignable ({getattr(error, 'reason', error)}) : relevé du monde ignoré")
+        return False
+
+
 # ---------------------------------------------------------------------------
 
 def main():
@@ -634,6 +649,11 @@ def main():
         return 1
 
     avec_stats = env_flag("MAP_STATS", True) and not args.no_stats
+    # API hors ligne : seules les cartes sont générées (vérifié avant le téléchargement, qui saute alors playerdata et stats)
+    if avec_stats and not args.stats_no_send and not shard_api_joignable():
+        if args.stats_only:
+            return 1
+        avec_stats = False
     sources = sorted({m.get("source", "") for m in maps})
     # Nouveau monde : les cartes publiées sont celles de l'ancien, la génération repart de zéro
     nouveau_monde = False

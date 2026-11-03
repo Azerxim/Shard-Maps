@@ -4,28 +4,28 @@
       "name": "tetrago",
       "label": "Tetrago",
       "group": "vanilla",
-      "source": "",
+      "source": "dimensions/minecraft/overworld",
       "generator": "minedmap"
     },
     {
       "name": "nether",
       "label": "Nether:surface",
       "group": "vanilla",
-      "source": "DIM-1",
+      "source": "dimensions/minecraft/the_nether",
       "generator": "legacy_nether"
     },
     {
       "name": "nether_toit",
       "label": "Nether:toit",
       "group": "vanilla",
-      "source": "DIM-1",
+      "source": "dimensions/minecraft/the_nether",
       "generator": "minedmap"
     },
     {
       "name": "end",
       "label": "End",
       "group": "vanilla",
-      "source": "DIM1",
+      "source": "dimensions/minecraft/the_end",
       "generator": "minedmap",
       "enabled": false
     }

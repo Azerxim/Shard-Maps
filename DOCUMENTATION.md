@@ -355,6 +355,7 @@ Le jeton n'est valable que pour la Shard-API qui l'a émis : `SHARD_API_BASE_URL
 | `npm run maps:generate`                  | Téléchargement SFTP, génération, publication, statistiques |
 | `npm run maps:generate:local`            | Regénère depuis la copie `work/world` déjà téléchargée     |
 | `npm run maps:generate:world -- /chemin` | Utilise une sauvegarde présente sur la machine             |
+| `npm run maps:generate:no-stats`         | Téléchargement SFTP, génération, publication, sans relevé  |
 | `npm run maps:cron:install`              | Tâche cron hebdomadaire (lundi 4 h 00 par défaut)          |
 | `npm run maps:cron:remove`               | Retire la tâche cron                                       |
 
