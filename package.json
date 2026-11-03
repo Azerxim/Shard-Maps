@@ -9,6 +9,7 @@
     "maps:generate": "bash scripts/map-generator/run.sh",
     "maps:generate:local": "bash scripts/map-generator/run.sh --skip-download",
     "maps:generate:world": "bash scripts/map-generator/run.sh --local-world",
+    "maps:generate:no-stats": "bash scripts/map-generator/run.sh --no-stats",
     "maps:stats": "bash scripts/map-generator/run.sh --stats-only",
     "maps:stats:world": "bash scripts/map-generator/run.sh --stats-only --local-world",
     "maps:stats:local": "bash scripts/map-generator/run.sh --stats-only --skip-download",
