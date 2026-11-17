@@ -5,9 +5,9 @@ Le serveur est en Fabric sans greffon : tout se déduit des fichiers de la sauve
 
 Mesures conservées :
 - présence : InhabitedTime, le temps passé par les joueurs dans chaque chunk, en heures ;
-- population : lits posés dans les chunks fréquentés (au moins MAP_STATS_BED_HOURS heures de présence),
-  à l'intérieur des frontières de la ville ou du quartier — les villages générés par le jeu, jamais visités,
-  sont ainsi écartés ;
+- population : nombre de lits posés dans les chunks dont au moins un bloc est à l'intérieur des frontières de la
+  ville ou du quartier (lits repérés par leur tête, lue dans la palette des sections) ; aucun seuil de présence ;
+- lits fréquentés : la part de ces lits située dans un chunk où des joueurs ont passé du temps (information) ;
 - villageois, entités, joueurs (temps de jeu, dernière position, lit, statistiques).
 
 Un lieu sans frontières tracées est mesuré dans un rayon autour de son point (mesure approximative).
@@ -29,8 +29,6 @@ import mcworld
 
 TICKS_PAR_HEURE = mcworld.TICKS_PAR_HEURE
 BLOCS_PAR_CHUNK = 16
-# Un lit occupe deux blocs : les moitiés relevées dans les chunks sont divisées par deux
-MOITIES_PAR_LIT = 2
 
 
 def log(niveau, message):
@@ -47,7 +45,6 @@ def reglages():
             return defaut
 
     return {
-        "seuil_heures_lit": nombre("MAP_STATS_BED_HOURS", 10.0, float),
         "seuil_jours_actif": nombre("MAP_STATS_ACTIVE_DAYS", 30),
         "seuil_heures_actif": nombre("MAP_STATS_ACTIVE_HOURS", 1.0, float),
         "taille_tuile": max(16, nombre("MAP_STATS_TILE", 256)),
@@ -185,6 +182,25 @@ def dans_lieu(lieu, x, z):
     return any((x - centre_x) ** 2 + (z - centre_z) ** 2 <= rayon ** 2 for centre_x, centre_z, rayon in lieu["cercles"])
 
 
+def chunk_touche(lieu, chunk_x, chunk_z):
+    """Vrai quand au moins un bloc du chunk (son centre) est à l'intérieur du lieu.
+
+    Testé bloc par bloc : réservé aux chunks qui contiennent des lits, peu nombreux.
+    """
+    debut_x, debut_z = chunk_x * BLOCS_PAR_CHUNK, chunk_z * BLOCS_PAR_CHUNK
+    return any(dans_lieu(lieu, debut_x + x + 0.5, debut_z + z + 0.5)
+               for x in range(BLOCS_PAR_CHUNK) for z in range(BLOCS_PAR_CHUNK))
+
+
+def superficie(lieu):
+    """Surface du lieu en blocs² : polygones (formule du lacet) et cercles, sans retirer les recouvrements."""
+    total = 0.0
+    for sommets in lieu["polygones"]:
+        total += abs(sum(x1 * z2 - x2 * z1 for (x1, z1), (x2, z2) in zip(sommets, sommets[1:] + sommets[:1]))) / 2
+    total += sum(math.pi * rayon ** 2 for _, _, rayon in lieu["cercles"])
+    return round(total)
+
+
 def cadre(lieu):
     """Rectangle englobant du lieu, en blocs."""
     points = [point for polygone in lieu["polygones"] for point in polygone]
@@ -200,54 +216,50 @@ def cadre(lieu):
 # ---------------------------------------------------------------------------
 # Mesures
 
-def _lits(mesures):
-    """Convertit les moitiés de lit accumulées en nombre de lits."""
-    mesures["lits"] = mesures.pop("moities") // MOITIES_PAR_LIT
-    mesures["lits_actifs"] = mesures.pop("moities_actives") // MOITIES_PAR_LIT
-    return mesures
+def mesurer_lieu(lieu, chunks):
+    """Population et activité d'un lieu, d'après les chunks qu'il touche.
 
-
-def mesurer_lieu(lieu, chunks, seuil_ticks):
-    """Population et activité d'un lieu, d'après les chunks qu'il contient."""
-    mesures = {"chunks": 0, "chunks_actifs": 0, "ticks": 0, "moities": 0, "moities_actives": 0, "villageois": 0}
+    - présence, chunks et villageois : chunks dont le centre est dans le lieu ;
+    - lits : tous ceux d'un chunk dont au moins un bloc est dans le lieu (chunk touché par la frontière).
+    """
+    mesures = {"chunks": 0, "chunks_actifs": 0, "ticks": 0, "lits": 0, "lits_actifs": 0, "villageois": 0}
     limites = cadre(lieu)
     if not limites:
-        return _lits(mesures)  # lieu sans frontières ni point : mesures vides
+        return mesures  # lieu sans frontières ni point : mesures vides
     min_x, min_z, max_x, max_z = limites
     for chunk_x in range(math.floor(min_x / BLOCS_PAR_CHUNK), math.floor(max_x / BLOCS_PAR_CHUNK) + 1):
         for chunk_z in range(math.floor(min_z / BLOCS_PAR_CHUNK), math.floor(max_z / BLOCS_PAR_CHUNK) + 1):
             case = chunks.get((chunk_x, chunk_z))
             if not case:
                 continue
-            # Le chunk compte quand son centre est dans le lieu
-            if not dans_lieu(lieu, chunk_x * BLOCS_PAR_CHUNK + 8, chunk_z * BLOCS_PAR_CHUNK + 8):
+            centre_dedans = dans_lieu(lieu, chunk_x * BLOCS_PAR_CHUNK + 8, chunk_z * BLOCS_PAR_CHUNK + 8)
+            lits = len(case["lits"]) if case["lits"] and (centre_dedans or chunk_touche(lieu, chunk_x, chunk_z)) else 0
+            mesures["lits"] += lits
+            if case["ticks"]:
+                mesures["lits_actifs"] += lits
+            if not centre_dedans:
                 continue
             mesures["chunks"] += 1
             mesures["ticks"] += case["ticks"]
-            mesures["moities"] += case["moities"]
             mesures["villageois"] += case["villageois"]
             if case["ticks"]:
                 mesures["chunks_actifs"] += 1
-            if case["ticks"] >= seuil_ticks:
-                mesures["moities_actives"] += case["moities"]
-    return _lits(mesures)
+    return mesures
 
 
-def tuiles(chunks, taille, seuil_ticks=0):
+def tuiles(chunks, taille):
     """Regroupe les chunks en tuiles carrées de `taille` blocs : { (x, z) du coin: mesures }."""
     chunks_par_tuile = max(1, taille // BLOCS_PAR_CHUNK)
     resultat = {}
     for (chunk_x, chunk_z), case in chunks.items():
         cle = (math.floor(chunk_x / chunks_par_tuile) * taille, math.floor(chunk_z / chunks_par_tuile) * taille)
-        tuile = resultat.setdefault(cle, {"ticks": 0, "moities": 0, "moities_actives": 0, "villageois": 0, "chunks": 0})
+        tuile = resultat.setdefault(cle, {"ticks": 0, "lits": 0, "lits_actifs": 0, "villageois": 0, "chunks": 0})
         tuile["ticks"] += case["ticks"]
-        tuile["moities"] += case["moities"]
+        tuile["lits"] += len(case["lits"])
         tuile["villageois"] += case["villageois"]
         tuile["chunks"] += 1
-        if case["ticks"] >= seuil_ticks:
-            tuile["moities_actives"] += case["moities"]
-    for tuile in resultat.values():
-        _lits(tuile)
+        if case["ticks"]:
+            tuile["lits_actifs"] += len(case["lits"])
     return resultat
 
 
@@ -310,15 +322,16 @@ def marquer_joueurs(joueurs, lieux, reglage, maintenant=None):
 
 
 def compter_joueurs(lieu, joueurs):
-    """Joueurs dont la dernière position, puis le lit, se trouvent dans le lieu."""
-    presents = residents = 0
+    """Joueurs dont la dernière position, puis le lit, se trouvent dans le lieu (et résidents actifs)."""
+    presents = residents = residents_actifs = 0
     for joueur in joueurs:
         position = _position_joueur(joueur, "dernier_x", "dernier_z", "derniere_dimension")
         if position and position[0] == lieu.get("source") and dans_lieu(lieu, position[1], position[2]):
             presents += 1
         if joueur.get("lieu_type") == lieu["entity_type"] and joueur.get("lieu_id") == lieu["entity_id"]:
             residents += 1
-    return presents, residents
+            residents_actifs += 1 if joueur.get("is_actif") else 0
+    return presents, residents, residents_actifs
 
 
 # ---------------------------------------------------------------------------
@@ -326,7 +339,7 @@ def compter_joueurs(lieu, joueurs):
 
 # Mesures cumulables d'une ville vers sa civilisation
 CHAMPS_CUMULES = ("population", "chunks", "chunks_actifs", "heures_presence", "lits", "lits_actifs",
-                  "villageois", "joueurs_presents", "joueurs_residents")
+                  "villageois", "joueurs_presents", "joueurs_residents", "joueurs_residents_actifs", "superficie")
 
 
 def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
@@ -338,7 +351,6 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
     reglage = reglage or reglages()
     site = site or {"civilisations": [], "villes": [], "quartiers": [], "dimensions": [], "cartographies": []}
     debut = time.monotonic()
-    seuil_ticks = reglage["seuil_heures_lit"] * TICKS_PAR_HEURE
 
     infos = mcworld.infos_monde(racine)
     dimensions_site = {dimension["id"]: dimension for dimension in site["dimensions"]}
@@ -365,16 +377,19 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
             "chunks": totaux["chunks"],
             "chunks_actifs": sum(1 for case in chunks.values() if case["ticks"]),
             "heures_presence": round(totaux["ticks"] / TICKS_PAR_HEURE, 2),
-            "lits": totaux["moities"] // MOITIES_PAR_LIT,
-            "lits_actifs": sum(case["moities"] for case in chunks.values() if case["ticks"] >= seuil_ticks) // MOITIES_PAR_LIT,
+            "lits": totaux["lits"],
+            "lits_actifs": sum(len(case["lits"]) for case in chunks.values() if case["ticks"]),
             "villageois": totaux["villageois"],
             "entites": totaux["entites"],
+            "regions": totaux["regions"],
+            "chunks_illisibles": totaux["illisibles"],
             "taille_octets": totaux["octets"],
         })
+        if totaux["illisibles"]:
+            log("WARN", f"{source or 'overworld'} : {totaux['illisibles']} chunk(s) illisible(s), ignoré(s)")
         log("STATS", f"{source or 'overworld'} : {totaux['chunks']} chunks, "
                      f"{totaux['ticks'] / TICKS_PAR_HEURE:.0f} h de présence, "
-                     f"{totaux['moities'] // MOITIES_PAR_LIT} lits, "
-                     f"{totaux['villageois']} villageois")
+                     f"{totaux['lits']} lits, {totaux['villageois']} villageois")
 
     if not os.path.isdir(mcworld.dossier_joueurs(racine, "playerdata")):
         log("WARN", "playerdata absent : aucun joueur relevé")
@@ -388,8 +403,8 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
     lieux_mesures = []
     for lieu in lieux:
         chunks = chunks_par_source.get(lieu["source"], {}) if lieu["source"] is not None else {}
-        mesures = mesurer_lieu(lieu, chunks, seuil_ticks)
-        presents, residents = compter_joueurs(lieu, joueurs)
+        mesures = mesurer_lieu(lieu, chunks)
+        presents, residents, residents_actifs = compter_joueurs(lieu, joueurs)
         lieux_mesures.append({
             "entity_type": lieu["entity_type"],
             "entity_id": lieu["entity_id"],
@@ -400,8 +415,8 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
             "rayon": lieu["rayon"],
             "x": lieu.get("x"),
             "z": lieu.get("z"),
-            # Population mesurée : les lits des chunks réellement fréquentés
-            "population": mesures["lits_actifs"],
+            # Population mesurée : tous les lits posés dans le lieu
+            "population": mesures["lits"],
             "chunks": mesures["chunks"],
             "chunks_actifs": mesures["chunks_actifs"],
             "heures_presence": round(mesures["ticks"] / TICKS_PAR_HEURE, 2),
@@ -410,6 +425,8 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
             "villageois": mesures["villageois"],
             "joueurs_presents": presents,
             "joueurs_residents": residents,
+            "joueurs_residents_actifs": residents_actifs,
+            "superficie": superficie(lieu) if lieu["methode"] != "villes" else 0,
         })
 
     # Une civilisation sans frontières tracées reprend la somme des mesures de ses villes
@@ -427,7 +444,7 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
     zones = []
     for source, chunks in chunks_par_source.items():
         dimension_id = next((id_ for id_, valeur in sources_site.items() if valeur == source), None)
-        for (x, z), tuile in tuiles(chunks, reglage["taille_tuile"], seuil_ticks).items():
+        for (x, z), tuile in tuiles(chunks, reglage["taille_tuile"]).items():
             if not tuile["ticks"]:
                 continue
             zones.append({
@@ -466,7 +483,7 @@ def collecter(racine, sources, site=None, reglage=None, racine_serveur=None):
         "data_version": infos["data_version"],
         "duration_seconds": round(time.monotonic() - debut, 2),
         "taille_octets": sum(dimension["taille_octets"] for dimension in dimensions),
-        "seuil_heures_lit": reglage["seuil_heures_lit"],
+        "chunks_illisibles": sum(dimension["chunks_illisibles"] for dimension in dimensions),
         "seuil_jours_actif": reglage["seuil_jours_actif"],
         "seuil_heures_actif": reglage["seuil_heures_actif"],
         "taille_tuile": reglage["taille_tuile"],
@@ -511,12 +528,12 @@ def resume(releve):
     for dimension in releve["dimensions"]:
         lignes.append(f"  {dimension['title']} : {dimension['chunks']} chunks, "
                       f"{dimension['heures_presence']:.0f} h de présence, {dimension['lits']} lits "
-                      f"({dimension['lits_actifs']} fréquentés), {dimension['villageois']} villageois")
+                      f"({dimension['lits_actifs']} dans des chunks visités), {dimension['villageois']} villageois")
     actifs = [joueur for joueur in releve["joueurs"] if joueur.get("is_actif")]
     lignes.append(f"  {len(releve['joueurs'])} joueurs, dont {len(actifs)} actifs")
-    for lieu in sorted(releve["lieux"], key=lambda lieu: lieu["heures_presence"], reverse=True)[:5]:
+    for lieu in sorted(releve["lieux"], key=lambda lieu: lieu["population"] or 0, reverse=True)[:5]:
         lignes.append(f"  {lieu['entity_type']} {lieu['title']} : population {lieu['population']}, "
-                      f"{lieu['heures_presence']:.0f} h, {lieu['lits']} lits, {lieu['joueurs_residents']} résidents")
+                      f"{lieu['heures_presence']:.0f} h, {lieu['joueurs_residents']} résidents")
     for zone in releve["zones"][:5]:
         lignes.append(f"  zone {zone['x']},{zone['z']} : {zone['heures_presence']:.0f} h, {zone['lits']} lits"
                       + (f" (près de {zone['lieu_title']}, {zone['lieu_distance']} blocs)" if zone.get("lieu_title") else ""))

@@ -95,7 +95,6 @@ mode développement.
 | `MAP_SIGN_PREFIX`                                  | Préfixes des panneaux affichés sur la carte (vide = aucun)                                                        |
 | `MAP_STATS`                                        | Relever les statistiques à chaque génération (`true`)                                                             |
 | `MAP_STATS_API_KEY`                                | Clé d'envoi, égale à `platforms.monde.key` de Shard-API                                                           |
-| `MAP_STATS_BED_HOURS`                              | Heures de présence minimales pour compter les lits d'un chunk (10)                                                |
 | `MAP_STATS_ACTIVE_HOURS`, `MAP_STATS_ACTIVE_DAYS`  | Joueur actif : temps de jeu minimal et connexion récente (1 h, 30 jours)                                          |
 | `MAP_STATS_TILE`, `MAP_STATS_TOP_ZONES`            | Côté des zones en blocs et nombre de zones gardées (256, 25)                                                      |
 | `MAP_STATS_RADIUS`, `MAP_STATS_QUARTIER_RADIUS`    | Rayon mesuré sans frontières tracées (128, 64 blocs)                                                              |
@@ -462,9 +461,9 @@ consultent sur `/admin/monde` du site.
 | Mesure                                  | Source                                                                                                                              |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Présence des joueurs                    | `InhabitedTime` de chaque chunk (`region/*.mca`)                                                                                    |
-| Population d'une ville ou d'un quartier | Lits dans les chunks fréquentés (≥ `MAP_STATS_BED_HOURS`), à l'intérieur de ses frontières, sinon dans un rayon autour de son point |
+| Population d'une ville ou d'un quartier | Tous les lits des chunks dont au moins un bloc est à l'intérieur de ses frontières (sinon d'un rayon autour de son point), sans seuil de présence ; chaque lit est repéré par sa tête dans la palette des sections |
 | Villageois et entités                   | `entities/*.mca`                                                                                                                    |
-| Joueurs                                 | `playerdata/*.dat` (position, lit, niveau), `stats/*.json` (temps de jeu, morts, distance…)                                         |
+| Joueurs                                 | `playerdata/*.dat` (position, lit, niveau, mode de jeu), `stats/*.json` (temps de jeu, morts, distance, échanges, élevage, pêche, craft…) |
 | Pseudos                                 | `usercache.json` du serveur ; côté API, compte lié ou playerdb.co                                                                   |
 | Zones les plus visitées                 | Carrés de `MAP_STATS_TILE` blocs, classés par présence                                                                              |
 

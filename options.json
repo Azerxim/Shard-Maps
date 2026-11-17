@@ -84,7 +84,7 @@
       "icon": "fa-solid fa-map",
       "class": "",
       "target": "_blank",
-      "hidden": 1
+      "hidden": 0
     },
     "github": {
       "href": "https://github.com/Azerxim/Shard-Maps",
@@ -92,7 +92,7 @@
       "icon": "fa-brands fa-github",
       "class": "",
       "target": "_blank",
-      "hidden": 0
+      "hidden": 1
     }
   }
 }
