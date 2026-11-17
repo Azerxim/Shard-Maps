@@ -2,7 +2,8 @@
 """Lecture d'une sauvegarde Minecraft, sans dépendance ni serveur : NBT, régions, entités et joueurs.
 
 Le serveur est en Fabric sans greffon : toutes les mesures viennent des fichiers de la sauvegarde.
-- region/*.mca : InhabitedTime (temps passé par les joueurs dans le chunk) et lits posés ;
+- region/*.mca : InhabitedTime (temps passé par les joueurs dans le chunk) et lits posés, lus dans la palette
+  des blocs de chaque section : la moitié « tête » d'un lit donne sa position exacte, quelle que soit la version ;
 - entities/*.mca : villageois et nombre d'entités ;
 - level.dat, playerdata/*.dat et stats/*.json : version du monde, positions, lits et temps de jeu.
 
@@ -159,17 +160,86 @@ def chunks_region(chemin):
             yield index, contenu
 
 
-def resume_chunk(data):
-    """{position, temps de présence, moitiés de lit} d'un chunk, sans lire les blocs.
-
-    Un lit occupe deux blocs, chacun avec son bloc-entité : les moitiés sont divisées par deux
-    une fois additionnées sur une zone entière (division au chunk près, l'écart se compenserait mal).
+def _proprietes(entree):
+    """(nom, propriétés) d'une entrée de palette, quelle que soit la version :
+    - jusqu'à 1.21 : compound {Name, Properties} ;
+    - 26.x : compound {id, properties}, ou {"": nom} pour un bloc dans son état par défaut (liste hétérogène :
+      les éléments qui ne sont pas des compounds y sont enveloppés sous une clé vide) ;
+    - texte "nom" ou "nom[clé=valeur,…]".
     """
-    pos, resume = 3, {"moities": 0, "ticks": 0, "x": 0, "z": 0}  # 3 = tag racine + nom vide
+    if isinstance(entree, dict):
+        nom = entree.get("Name") or entree.get("id") or entree.get("")
+        if not isinstance(nom, str):
+            return "", {}
+        if "[" in nom:
+            return _proprietes(nom)
+        return nom, entree.get("Properties") or entree.get("properties") or {}
+    texte = str(entree)
+    if "[" not in texte:
+        return texte, {}
+    nom, reste = texte.split("[", 1)
+    proprietes = {}
+    for paire in reste.rstrip("]").split(","):
+        if "=" in paire:
+            cle, valeur = paire.split("=", 1)
+            proprietes[cle.strip()] = valeur.strip()
+    return nom, proprietes
+
+
+# Lits exclus de la population : le lit de paille (26.x) n'est pas un lieu de vie
+LITS_EXCLUS = {"minecraft:straw_bed"}
+
+
+def est_tete_de_lit(entree):
+    """Vrai pour la moitié « tête » d'un lit (minecraft:red_bed[part=head]…) : un lit = une tête."""
+    nom, proprietes = _proprietes(entree)
+    return (nom.endswith("_bed") and nom not in LITS_EXCLUS
+            and str(proprietes.get("part", "")).lower() == "head")
+
+
+def indices_palette(donnees, taille_palette, nombre=4096):
+    """Indices de palette d'une section, compactés dans des longs (format 1.16+, sans chevauchement)."""
+    bits = max(4, (taille_palette - 1).bit_length())
+    par_long = 64 // bits
+    masque = (1 << bits) - 1
+    for index in range(nombre):
+        valeur = donnees[index // par_long] & 0xFFFFFFFFFFFFFFFF
+        yield (valeur >> ((index % par_long) * bits)) & masque
+
+
+def lits_de_section(section):
+    """Positions (x, z) locales au chunk des têtes de lit d'une section."""
+    etats = section.get("block_states") or {}
+    palette = etats.get("palette") or []
+    tetes = {index for index, entree in enumerate(palette) if est_tete_de_lit(entree)}
+    if not tetes:
+        return []
+    if len(palette) == 1:
+        return [(index & 15, (index >> 4) & 15) for index in range(4096)]  # section entièrement en lits
+    donnees = etats.get("data") or []
+    if not donnees:
+        return []
+    return [(index & 15, (index >> 4) & 15)
+            for index, valeur in enumerate(indices_palette(donnees, len(palette))) if valeur in tetes]
+
+
+# Les noms de lit contiennent "_bed" (minecraft:red_bed) : sans ces octets, les sections ne sont pas décodées
+MARQUE_LIT = b"_bed"
+
+
+def resume_chunk(data):
+    """{position, temps de présence, positions des lits} d'un chunk.
+
+    Les lits sont cherchés dans la palette des sections, et seulement quand le chunk en contient : le reste
+    du chunk (blocs, bloc-entités) est sauté sans être décodé.
+    """
+    pos, resume = 3, {"ticks": 0, "x": 0, "z": 0}  # 3 = tag racine + nom vide
+    lits_locaux = []
     while True:
         tag = data[pos]
         pos += 1
         if tag == TAG_FIN:
+            resume["lits"] = [(resume["x"] * 16 + x, resume["z"] * 16 + z) for x, z in lits_locaux]
             return resume
         taille = struct.unpack_from(">H", data, pos)[0]
         nom = data[pos + 2:pos + 2 + taille].decode("utf-8", "replace")
@@ -180,15 +250,13 @@ def resume_chunk(data):
             resume["x"], pos = _valeur_simple(data, pos, tag)
         elif nom == "zPos":
             resume["z"], pos = _valeur_simple(data, pos, tag)
-        elif nom == "block_entities":
-            element = data[pos]
-            nombre = struct.unpack_from(">i", data, pos + 1)[0]
-            pos += 5
-            for _ in range(max(0, nombre)):
-                debut = pos
-                pos = _sauter(data, pos, element)
-                if b"minecraft:bed" in data[debut:pos]:
-                    resume["moities"] += 1
+        elif nom == "sections" and tag == TAG_LISTE and MARQUE_LIT in data:
+            lecteur = Lecteur(data)
+            lecteur.pos = pos
+            for section in lecteur.valeur(tag):
+                if isinstance(section, dict):
+                    lits_locaux.extend(lits_de_section(section))
+            pos = lecteur.pos
         else:
             pos = _sauter(data, pos, tag)
 
@@ -219,14 +287,18 @@ def resume_entites(data):
             pos = _sauter(data, pos, tag)
 
 
+def _case(chunks, x, z):
+    return chunks.setdefault((x, z), {"ticks": 0, "lits": [], "villageois": 0})
+
+
 def lire_dimension(dossier):
     """Parcourt region/ et entities/ d'une dimension.
 
-    Renvoie (totaux, chunks) où chunks vaut { (chunk x, chunk z): {ticks, moities, villageois} },
-    `moities` comptant les moitiés de lit (voir resume_chunk).
+    Renvoie (totaux, chunks) où chunks vaut { (chunk x, chunk z): {ticks, lits, villageois} },
+    `lits` listant la position (x, z) en blocs de chaque lit du chunk.
     """
     chunks = {}
-    totaux = {"chunks": 0, "ticks": 0, "moities": 0, "villageois": 0, "entites": 0, "octets": 0, "regions": 0,
+    totaux = {"chunks": 0, "ticks": 0, "lits": 0, "villageois": 0, "entites": 0, "octets": 0, "regions": 0,
               "illisibles": 0}
 
     for chemin in sorted(glob.glob(os.path.join(dossier, "region", "*.mca"))):
@@ -240,11 +312,11 @@ def lire_dimension(dossier):
                 continue
             totaux["chunks"] += 1
             totaux["ticks"] += resume["ticks"]
-            totaux["moities"] += resume["moities"]
-            if resume["ticks"] or resume["moities"]:
-                case = chunks.setdefault((resume["x"], resume["z"]), {"ticks": 0, "moities": 0, "villageois": 0})
+            totaux["lits"] += len(resume["lits"])
+            if resume["ticks"] or resume["lits"]:
+                case = _case(chunks, resume["x"], resume["z"])
                 case["ticks"] += resume["ticks"]
-                case["moities"] += resume["moities"]
+                case["lits"].extend(resume["lits"])
 
     for chemin in sorted(glob.glob(os.path.join(dossier, "entities", "*.mca"))):
         for _, contenu in chunks_region(chemin):
@@ -256,8 +328,7 @@ def lire_dimension(dossier):
             totaux["entites"] += resume["entites"]
             totaux["villageois"] += resume["villageois"]
             if resume["villageois"]:
-                case = chunks.setdefault((resume["x"], resume["z"]), {"ticks": 0, "moities": 0, "villageois": 0})
-                case["villageois"] += resume["villageois"]
+                _case(chunks, resume["x"], resume["z"])["villageois"] += resume["villageois"]
 
     return totaux, chunks
 
@@ -290,7 +361,12 @@ STATS_JOUEUR = {
     "joueurs_tues": "minecraft:player_kills",
     "monstres_tues": "minecraft:mob_kills",
     "nuits_dormies": "minecraft:sleep_in_bed",
+    "echanges_villageois": "minecraft:traded_with_villager",
+    "animaux_eleves": "minecraft:animals_bred",
+    "poissons_peches": "minecraft:fish_caught",
 }
+# Mode de jeu enregistré dans le fichier du joueur (playerGameType)
+MODES_JEU = {0: "survie", 1: "creatif", 2: "aventure", 3: "spectateur"}
 # Compteurs de déplacement, en centimètres
 DEPLACEMENTS = ("minecraft:walk_one_cm", "minecraft:sprint_one_cm", "minecraft:crouch_one_cm",
                 "minecraft:swim_one_cm", "minecraft:walk_on_water_one_cm", "minecraft:walk_under_water_one_cm",
@@ -312,6 +388,10 @@ def _statistiques_joueur(racine, uuid):
     mesures["heures_jeu"] = round(int(compteurs.get("minecraft:play_time", 0)) / TICKS_PAR_HEURE, 2)
     mesures["distance_km"] = round(sum(int(compteurs.get(cle, 0)) for cle in DEPLACEMENTS) / 100000, 2)
     mesures["blocs_mines"] = sum(int(valeur) for valeur in stats.get("minecraft:mined", {}).values())
+    mesures["objets_craftes"] = sum(int(valeur) for valeur in stats.get("minecraft:crafted", {}).values())
+    # Temps écoulé depuis la dernière mort, en heures de jeu (absent tant que le joueur n'est jamais mort)
+    if "minecraft:time_since_death" in compteurs:
+        mesures["heures_sans_mourir"] = round(int(compteurs["minecraft:time_since_death"]) / TICKS_PAR_HEURE, 2)
     return mesures
 
 
@@ -342,6 +422,7 @@ def lire_joueurs(racine, noms=None):
             "uuid": uuid,
             "pseudo": noms.get(uuid.replace("-", "").lower()),
             "niveau": donnees.get("XpLevel"),
+            "mode_jeu": MODES_JEU.get(donnees.get("playerGameType")),
             # Date du fichier : dernière déconnexion sur le serveur (fausse sur une sauvegarde recopiée)
             "derniere_activite": os.path.getmtime(chemin),
             "dernier_x": int(position[0]) if len(position) >= 3 else None,
