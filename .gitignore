@@ -39,3 +39,5 @@ scripts/map-generator/.cache/
 scripts/map-generator/.venv/
 scripts/map-generator/work/
 __pycache__/
+
+package-lock.json
