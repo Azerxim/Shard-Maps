@@ -5,6 +5,32 @@ async function BuildDate() {
   const maps_date = document.getElementById("maps_date");
   const txt = document.createTextNode(maps_data.date);
   maps_date.appendChild(txt);
+  BuildTelechargement(maps_date);
+}
+
+// Lien vers le monde qui a servi à la génération (scripts/map-generator, assets/data/telechargement), après la date ;
+// rien tant qu'aucun monde n'est publié
+async function BuildTelechargement(parent) {
+  try {
+    const response = await fetch("assets/data/telechargement/monde.json", { cache: "no-cache" });
+    if (!response.ok) return;
+    const monde = await response.json();
+    if (!monde.fichier) return;
+    const taille = Math.round(monde.taille / 1048576).toLocaleString("fr-FR") + " Mo";
+    const a = document.createElement("a");
+    a.href = "assets/data/telechargement/" + monde.fichier;
+    a.setAttribute("download", "");
+    a.className = "link link-hover ml-2";
+    a.title = "Télécharger le monde de cette carte (" + (monde.version ? "Minecraft " + monde.version + ", " : "") + taille + ")";
+    a.setAttribute("aria-label", a.title);
+    const icone = document.createElement("i");
+    icone.className = "fa-solid fa-download";
+    a.appendChild(icone);
+    a.appendChild(document.createTextNode(" Monde"));
+    parent.appendChild(a);
+  } catch (error) {
+    console.warn("Monde téléchargeable indisponible :", error);
+  }
 }
 
 async function BuildMenu() {

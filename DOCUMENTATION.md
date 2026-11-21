@@ -370,6 +370,7 @@ Options (après `--`) :
 | `--no-stats`           | Pas de relevé du monde                                                                        |
 | `--stats-only`         | Relevé sans génération                                                                        |
 | `--stats-no-send`      | Relevé sans envoi à l'API                                                                     |
+| `--no-archive`         | Ne publie pas le monde téléchargeable (aussi `MAP_ARCHIVE=0` dans `.env`)                     |
 
 `install-cron.sh` accepte aussi une planification : `./install-cron.sh "0 4 * * 1"`.
 
@@ -393,7 +394,8 @@ Options (après `--`) :
    - **Minecraft 26.x** : les dimensions sont rangées sous `dimensions/minecraft/<overworld|the_nether|the_end>` et
      les joueurs sous `players/data` et `players/stats`. La copie de travail garde la disposition classique
      (`region`, `DIM-1`, `playerdata`, `stats`) lue par MinedMap et le relevé, et `level.dat` y est complété de
-     `SpawnX/Y/Z` (tirés de `spawn.pos`), que MinedMap 2.2 exige.
+     `SpawnX/Y/Z` (tirés de `spawn.pos`), que MinedMap 2.2 exige. Le `level.dat` de chaque dimension est
+     aussi copié, pour que le monde téléchargeable s'ouvre.
    - **Nouveau monde** (nouvelle saison) : si le monde diffère de celui de la copie de travail (`work/.monde`),
      l'ancienne copie et ses cartes intermédiaires sont déplacées dans `work/archives/` au lieu d'être écrasées,
      et la génération repart de zéro (sans reprendre les tuiles publiées de l'ancien monde).
@@ -401,7 +403,18 @@ Options (après `--`) :
    sans aucune région (pas encore explorée) est ignorée, sans erreur.
 3. **Publication** : chaque carte réussie est copiée dans `assets/data/<nom>` et `maps.json` est mis à jour sans
    perdre les entrées existantes. Une carte en erreur garde ses anciennes tuiles.
-4. **Statistiques** : relevé du monde et envoi à Shard-API.
+4. **Monde téléchargeable** : la copie de travail qui a servi aux cartes est publiée dans
+   `assets/data/telechargement/` : `tetrago-monde.zip` (dossier du monde : `level.dat`, puis `level.dat`, `region`
+   et `entities` de chaque dimension) et `monde.json` (`fichier`, `monde`, `version`, `date`, `taille`, `sha256`,
+   `dimensions`). **Jamais les joueurs** : ni `playerdata`, ni `stats`, ni `usercache.json`. Le monde est complet
+   par ailleurs (intérieurs, souterrains, contenu des coffres), choix de l'équipe : il est public. Les deux fichiers
+   sont écrits à côté puis renommés, le lien reste valable pendant l'écriture ; prévoir deux fois la taille de
+   l'archive sur le disque (≈ 460 Mo pour Tetrago-S3). Pas d'archive avec `--only` (cartes en partie à jour) ni
+   `--no-publish`. Une erreur ici n'empêche ni la publication des cartes ni le relevé. Le site l'affiche sur
+   `/aides#monde` (`components/aides/TelechargementMonde.jsx`), la carte complète par un lien « Monde » à côté de
+   la date (`ui/menu.js`). Les configurations nginx et Apache revalident ce dossier à chaque fois (même nom d'une
+   génération à l'autre) et autorisent sa lecture depuis le site (`Access-Control-Allow-Origin`).
+5. **Statistiques** : relevé du monde et envoi à Shard-API.
 
 ### `maps.config.json`
 

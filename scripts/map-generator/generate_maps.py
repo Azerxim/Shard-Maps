@@ -12,7 +12,9 @@ Adapté de MinedMap Viewer Generator (https://github.com/Azerxim/MinedMap-Viewer
   (world_stats.py, désactivable avec --no-stats, ignoré quand Shard-API ne répond pas) ;
 - mondes Minecraft 26.x (dimensions/minecraft/<dimension>, players/) : copiés dans la disposition classique
   (region, DIM-1, playerdata) que MinedMap et world_stats lisent, et level.dat complété de SpawnX/Y/Z ;
-- quand le monde change (nouvelle saison), l'ancienne copie de travail est archivée dans work/archives.
+- quand le monde change (nouvelle saison), l'ancienne copie de travail est archivée dans work/archives ;
+- la copie qui a servi aux cartes est publiée en téléchargement (assets/data/telechargement : archive zip et
+  monde.json), sans les données des joueurs ; désactivable avec --no-archive ou MAP_ARCHIVE=0.
 
 Lancer via run.sh (environnement virtuel, verrou, logs).
 """
@@ -21,6 +23,7 @@ import datetime as dt
 import json
 import os
 import posixpath
+import re
 import shutil
 import stat
 import struct
@@ -29,6 +32,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import hashlib
+import zipfile
 
 # Le relevé du monde vit à côté de ce fichier : importable même si le script est chargé par son chemin
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -59,6 +64,12 @@ DIMENSIONS_26 = {"": "dimensions/minecraft/overworld", "DIM-1": "dimensions/mine
 JOUEURS_26 = {"playerdata": "players/data", "stats": "players/stats"}
 MARQUEUR_MONDE = os.path.join(WORK_DIR, ".monde")  # nom du monde de la copie de travail
 ARCHIVES_DIR = os.path.join(WORK_DIR, "archives")
+
+# Monde téléchargeable : la copie de travail qui a servi aux cartes, sans les joueurs (playerdata, stats, usercache).
+# Nom fixe pour que les liens du site et de la carte restent valables d'une génération à l'autre.
+TELECHARGEMENT_DIR = os.path.join(DATA_DIR, "telechargement")
+ARCHIVE_MONDE = "tetrago-monde.zip"
+ARCHIVE_DOSSIERS = ("region", "entities")
 
 MINESTRATOR_API = "https://mine.sttr.io"
 MMVG_DIR = os.path.join(CACHE_DIR, "MinedMap-Viewer-Generator", "MinedMap")
@@ -366,6 +377,11 @@ def download_world(sources, avec_stats=False):
                       sftp.stat(posixpath.join(remote_world, "level.dat")), stats)
             dossiers = ("region",) + (STATS_DIMENSION_DIRS if avec_stats else ())
             for source in sources:
+                # Minecraft 26.x : chaque dimension a son propre level.dat, gardé pour que le monde téléchargé s'ouvre
+                dimension_dat = posixpath.join(remote_world, chemin_source(source, monde_26), "level.dat")
+                if monde_26 and remote_exists(sftp, dimension_dat):
+                    os.makedirs(os.path.join(WORLD_DIR, source), exist_ok=True)
+                    sync_file(sftp, dimension_dat, os.path.join(WORLD_DIR, source, "level.dat"), sftp.stat(dimension_dat), stats)
                 for dossier in dossiers:
                     remote_dir = posixpath.join(remote_world, chemin_source(source, monde_26), dossier)
                     local_dir = os.path.join(WORLD_DIR, source, dossier)
@@ -579,6 +595,52 @@ def update_maps_json(generated):
     log("PUB", "maps.json mis à jour")
 
 
+def publier_archive_monde(sources):
+    """Archive zip de work/world (level.dat, puis level.dat, region et entities de chaque dimension), sans les
+    joueurs, et sa description monde.json. Écrites à côté puis renommées : le lien publié reste toujours valable."""
+    infos = mcworld.infos_monde(WORLD_DIR)
+    racine = re.sub(r"[^A-Za-z0-9_-]+", "_", infos["nom"] or "") or "monde"  # dossier du monde une fois décompressé
+    os.makedirs(TELECHARGEMENT_DIR, exist_ok=True)
+    archive = os.path.join(TELECHARGEMENT_DIR, ARCHIVE_MONDE)
+    tmp = os.path.join(TELECHARGEMENT_DIR, f".{ARCHIVE_MONDE}.tmp")
+    dimensions = []
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+        z.write(os.path.join(WORLD_DIR, "level.dat"), f"{racine}/level.dat")
+        for source in sources:
+            dossier_dimension = os.path.join(WORLD_DIR, source)
+            if not os.path.isdir(os.path.join(dossier_dimension, "region")):
+                continue
+            dimensions.append(source or "overworld")
+            prefixe = posixpath.join(racine, source.replace(os.sep, "/")) if source else racine
+            if source and os.path.isfile(os.path.join(dossier_dimension, "level.dat")):
+                z.write(os.path.join(dossier_dimension, "level.dat"), f"{prefixe}/level.dat")
+            for dossier in ARCHIVE_DOSSIERS:
+                for chemin, _, fichiers in os.walk(os.path.join(dossier_dimension, dossier)):
+                    for fichier in sorted(fichiers):
+                        complet = os.path.join(chemin, fichier)
+                        z.write(complet, posixpath.join(prefixe, os.path.relpath(complet, dossier_dimension).replace(os.sep, "/")))
+    empreinte = hashlib.sha256()
+    with open(tmp, "rb") as f:
+        for bloc in iter(lambda: f.read(1 << 20), b""):
+            empreinte.update(bloc)
+    os.replace(tmp, archive)
+
+    description = {
+        "fichier": ARCHIVE_MONDE,
+        "monde": infos["nom"],
+        "version": infos["version"],
+        "date": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "taille": os.path.getsize(archive),
+        "sha256": empreinte.hexdigest(),
+        "dimensions": dimensions,
+    }
+    tmp_json = os.path.join(TELECHARGEMENT_DIR, ".monde.json.tmp")
+    with open(tmp_json, "w", encoding="utf-8") as f:
+        json.dump(description, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_json, os.path.join(TELECHARGEMENT_DIR, "monde.json"))
+    log("PUB", f"Monde téléchargeable : assets/data/telechargement/{ARCHIVE_MONDE} ({description['taille'] / 1048576:.0f} Mo)")
+
+
 # ---------------------------------------------------------------------------
 # Statistiques du monde
 
@@ -618,6 +680,7 @@ def main():
     parser.add_argument("--stats-only", action="store_true", help="relever les statistiques sans générer de carte")
     parser.add_argument("--stats-no-send", action="store_true", help="relever les statistiques sans les envoyer à l'API")
     parser.add_argument("--only", action="append", metavar="NOM", help="ne traiter que cette carte (répétable)")
+    parser.add_argument("--no-archive", action="store_true", help="ne pas publier le monde téléchargeable")
     args = parser.parse_args()
 
     with open(CONFIG_PATH, encoding="utf-8") as f:
@@ -696,6 +759,12 @@ def main():
 
     if generated and not args.no_publish:
         update_maps_json(generated)
+        # Le monde téléchargeable est celui des cartes publiées ; --only le laisse tel quel (cartes en partie à jour)
+        if not args.no_archive and not args.only and env_flag("MAP_ARCHIVE", True):
+            try:
+                publier_archive_monde(sources)
+            except Exception as error:  # les cartes sont publiées : l'archive ne doit pas faire échouer la génération
+                log("ERROR", f"Monde téléchargeable : {error}")
 
     if avec_stats:
         try:
