@@ -374,6 +374,10 @@ Options (après `--`) :
 
 `install-cron.sh` accepte aussi une planification : `./install-cron.sh "0 4 * * 1"`.
 
+La génération se lance aussi depuis le site : bouton « Générer la carte » de la page des statistiques du monde
+(`/admin/monde`, administrateurs). Shard-API exécute alors `run.sh` sans argument, en tâche détachée (même machine
+requise), et affiche l'état : en cours (verrou `.cache/run.lock`), date de `maps.json`, fin du dernier journal.
+
 ### Déroulement
 
 `run.sh` :
